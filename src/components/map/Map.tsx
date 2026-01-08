@@ -111,8 +111,8 @@ function Map({
 }: MapProps) {
     const [route, setRoute] = useState<[number, number][]>([]);
     const [animatedDriverPos, setAnimatedDriverPos] = useState<{ lat: number; lng: number } | null>(null);
-    const animationFrameRef = useRef<number>();
-    const startTimeRef = useRef<number>();
+    const animationFrameRef = useRef<number | null>(null);
+    const startTimeRef = useRef<number | null>(null);
 
     const routeStart = useMemo(() => {
         let start = pickupLocation || userLocation;
