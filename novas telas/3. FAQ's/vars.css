@@ -1,0 +1,49 @@
+/* Figma Styles of your File */
+:root {
+  /* Colors */
+  --primary-color: #3ae012;
+  --grey: #dee5e7;
+  --grey-2: #002333;
+  --black: #002333;
+  --grey-3: #ffffff;
+
+  /* Fonts */
+  --15textbold-font-family: Inter-Bold, sans-serif;
+  --15textbold-font-size: 15px;
+  --15textbold-line-height: normal;
+  --15textbold-font-weight: 700;
+  --15textbold-font-style: normal;
+  --15textreg-font-family: Inter-Regular, sans-serif;
+  --15textreg-font-size: 15px;
+  --15textreg-line-height: 136%;
+  --15textreg-font-weight: 400;
+  --15textreg-font-style: normal;
+  --13textreg-font-family: Inter-Regular, sans-serif;
+  --13textreg-font-size: 13px;
+  --13textreg-line-height: 140%;
+  --13textreg-font-weight: 400;
+  --13textreg-font-style: normal;
+  --heading-2-font-family: Inter-Bold, sans-serif;
+  --heading-2-font-size: 18px;
+  --heading-2-line-height: 28px;
+  --heading-2-font-weight: 700;
+  --heading-2-font-style: normal;
+  --heading-3-font-family: Inter-Bold, sans-serif;
+  --heading-3-font-size: 13px;
+  --heading-3-line-height: 20px;
+  --heading-3-font-weight: 700;
+  --heading-3-font-style: normal;
+  --heading-1-font-family: Inter-Bold, sans-serif;
+  --heading-1-font-size: 20px;
+  --heading-1-line-height: 28px;
+  --heading-1-font-weight: 700;
+  --heading-1-font-style: normal;
+  --11textreg-font-family: Inter-Regular, sans-serif;
+  --11textreg-font-size: 11px;
+  --11textreg-line-height: 22px;
+  --11textreg-font-weight: 400;
+  --11textreg-font-style: normal;
+
+  /* Effects */
+}
+/* Figma Color Variables of your File */
