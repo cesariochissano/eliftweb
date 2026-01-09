@@ -3,8 +3,8 @@ import { MapPin, User, Car, Bike, Phone, MessageSquare, X, AlertCircle, Clock, B
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '../../components/ui/button';
+import { HomeDashboard } from '../../components/home/HomeDashboard';
 import { ServiceCard } from '../../components/ui/service-card';
-import { ServiceGrid } from '../../components/home/ServiceGrid';
 import { Input } from '../../components/ui/input';
 import Map from '../../components/map/Map';
 import { ChatDrawer } from '../../components/ui/chat-drawer';
@@ -674,42 +674,7 @@ export default function HomePassenger() {
                 />
             </div>
 
-            {/* Header Floating */}
-            {/* Header Floating - Strict 10% Height Area */}
-            {(status === 'IDLE' || status === 'REQUESTING') && sheetState !== 'SEARCHING' && (
-                <header className="absolute top-0 left-0 right-0 z-[500] h-nav-header p-4 pt-safe pointer-events-none flex items-start">
-                    <div className="pointer-events-auto bg-white/90 backdrop-blur-md shadow-soft rounded-2xl p-4 flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-300 transition-colors overflow-hidden border border-gray-100" onClick={() => navigate('/passenger/menu')}>
-                            {userAvatar ? (
-                                <img src={userAvatar} alt="Profile" className="w-full h-full object-cover" />
-                            ) : (
-                                <User size={20} className="text-gray-500" />
-                            )}
-                        </div>
-                        <div className="flex-1 cursor-pointer" onClick={() => navigate('/passenger/menu')}>
-                            <p className="text-xs text-text-muted font-medium">{greeting},</p>
-                            <h2 className="text-sm font-bold text-text-main capitalize">{userName || 'Passageiro'}</h2>
-                        </div>
-                        <Button
-                            size="icon"
-                            variant="ghost"
-                            className="rounded-full text-gray-500 hover:bg-gray-100"
-                            onClick={() => navigate('/passenger/menu')}
-                        >
-                            <Menu size={24} className="text-[#101b0d]" />
-                        </Button>
-                    </div>
-                    {/* AI Assistant */}
-                    <div className="absolute top-24 right-4 z-[900] pointer-events-auto">
-                        <Button
-                            className="w-12 h-12 rounded-full bg-black text-primary shadow-xl border-2 border-primary/20 flex items-center justify-center p-0"
-                            onClick={() => setIsAiOpen(true)}
-                        >
-                            <Bot size={24} />
-                        </Button>
-                    </div>
-                </header>
-            )}
+
 
             <AIAssistantDrawer
                 isOpen={isAiOpen}
@@ -738,22 +703,25 @@ export default function HomePassenger() {
 
                     <div className="flex-1 flex flex-col px-6 pb-safe overflow-hidden">
 
-                        {/* IDLE STATE: Service Grid Entry Point */}
+                        {/* IDLE STATE: Full Screen Dashboard */}
                         {sheetState === 'IDLE' && (
-                            <div className="h-full flex flex-col pt-2 pb-safe">
-                                {/* Welcome / Action Prompt */}
-                                <div className="px-6 mb-2">
-                                    <h2 className="text-xl font-bold text-[#101b0d]">Para onde vamos?</h2>
-                                    <p className="text-xs text-gray-500">Escolha como pretende viajar hoje</p>
-                                </div>
-
-                                {/* Componentized Grid (Block 8.3) */}
-                                <div className="flex-1 min-h-0 w-full">
-                                    <ServiceGrid onSelectService={(id) => {
+                            <div className="fixed inset-0 z-[1000] bg-gray-50">
+                                <HomeDashboard
+                                    userName={userName}
+                                    greeting={greeting}
+                                    userAvatar={userAvatar}
+                                    currentAddress={pickup?.address || 'Localizando...'}
+                                    onMenuClick={() => navigate('/passenger/menu')}
+                                    onServiceSelect={(id) => {
                                         setSelectedService(id);
                                         setSheetState('SEARCHING');
-                                    }} />
-                                </div>
+                                    }}
+                                    onScheduleClick={() => alert("Funcionalidade de Agendamento em breve!")}
+                                    onRequestClick={() => {
+                                        setSelectedService('drive');
+                                        setSheetState('SEARCHING');
+                                    }}
+                                />
                             </div>
                         )}
 
