@@ -263,8 +263,8 @@ function Map({
                     ))}
             </MapContainer>
 
-            <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-white/90 to-transparent pointer-events-none z-[400]" />
-            <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white/90 to-transparent pointer-events-none z-[400]" />
+            <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-white/90 to-transparent pointer-events-none z-[400]" />
+            <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-white/90 to-transparent pointer-events-none z-[400]" />
         </div>
     );
 }

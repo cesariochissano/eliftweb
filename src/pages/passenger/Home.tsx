@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Search, MapPin, User, Car, Bike, Phone, MessageSquare, X, AlertCircle, Clock, Bot, Menu, Ticket, Briefcase, Truck, Shield, Share2, Zap } from 'lucide-react';
+import { MapPin, User, Car, Bike, Phone, MessageSquare, X, AlertCircle, Clock, Bot, Menu, Ticket, Briefcase, Truck, Shield, Share2, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '../../components/ui/button';
 import { ServiceCard } from '../../components/ui/service-card';
+import { ServiceGrid } from '../../components/home/ServiceGrid';
 import { Input } from '../../components/ui/input';
 import Map from '../../components/map/Map';
 import { ChatDrawer } from '../../components/ui/chat-drawer';
@@ -439,19 +440,7 @@ export default function HomePassenger() {
         localStorage.setItem('recentPlaces', JSON.stringify(updated));
     };
 
-    const handleSavedPlaceClick = async (type: 'home' | 'work') => {
-        const place = savedPlaces.find(p => p.type === type);
-        if (place) {
-            setDestination({ lat: place.lat, lng: place.lng, address: place.address });
-            setSheetState('SELECTING');
-        } else {
-            // Enter Save Mode
-            setSavingPlaceType(type);
-            setActiveInput('destination'); // Focus destination input to search
-            setSheetState('SEARCHING');
-            setGlobalError(`Pesquise o endereço para salvar como ${type === 'home' ? 'Casa' : 'Trabalho'}.`);
-        }
-    };
+
 
     // Subscribe to realtime updates (Trips & Drivers)
     useEffect(() => {
@@ -620,9 +609,7 @@ export default function HomePassenger() {
         }
     }, [status, destination]);
 
-    const handleStartSearch = () => {
-        setSheetState('SEARCHING');
-    };
+
 
     const handleCloseSearch = () => {
         setSheetState('IDLE');
@@ -634,9 +621,9 @@ export default function HomePassenger() {
     // but for now strict states are safer.
 
     return (
-        <div className="relative h-screen w-full overflow-hidden flex flex-col bg-gray-100">
-            {/* Debug Tag: V2.1 */}
-            <div className="absolute top-2 right-2 z-[9999] text-[8px] text-gray-300 font-mono pointer-events-none">eLift v2.1 (SyncFix)</div>
+        <div className="mobile-view-container bg-gray-100">
+            {/* Debug Tag: V2.2 - Block 8 Standards */}
+            <div className="absolute top-2 right-2 z-[9999] text-[8px] text-gray-300 font-mono pointer-events-none">eLift v2.2 (MobileStd)</div>
 
             {/* Offline Banner */}
             {!isOnline && (
@@ -675,8 +662,8 @@ export default function HomePassenger() {
                 receiverName={status === 'ACCEPTED' ? 'João Motorista' : 'Passageiro'}
             />
 
-            {/* Map - Full Background */}
-            <div className={`absolute inset-0 transition-all duration-500 ${sheetState === 'SEARCHING' ? 'opacity-30 scale-95' : 'opacity-100'}`}>
+            {/* Map - Strict 45% Viewport */}
+            <div className={`h-map-view transition-all duration-500 relative z-0 ${sheetState === 'SEARCHING' ? 'opacity-30' : 'opacity-100'}`}>
                 <Map
                     driverLocation={latitude && longitude ? { lat: latitude, lng: longitude } : undefined}
                     pickupLocation={tripDetails ? { lat: tripDetails.originLat!, lng: tripDetails.originLng! } : null}
@@ -688,8 +675,9 @@ export default function HomePassenger() {
             </div>
 
             {/* Header Floating */}
+            {/* Header Floating - Strict 10% Height Area */}
             {(status === 'IDLE' || status === 'REQUESTING') && sheetState !== 'SEARCHING' && (
-                <header className="absolute top-0 left-0 right-0 z-[500] p-4 pt-safe pointer-events-none">
+                <header className="absolute top-0 left-0 right-0 z-[500] h-nav-header p-4 pt-safe pointer-events-none flex items-start">
                     <div className="pointer-events-auto bg-white/90 backdrop-blur-md shadow-soft rounded-2xl p-4 flex items-center gap-3">
                         <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-300 transition-colors overflow-hidden border border-gray-100" onClick={() => navigate('/passenger/menu')}>
                             {userAvatar ? (
@@ -729,16 +717,16 @@ export default function HomePassenger() {
                 userRole="passenger"
             />
 
-            {/* DYNAMIC BOTTOM SHEET */}
+            {/* DYNAMIC BOTTOM SHEET - Replaces absolute positioning with flex content */}
             {(status === 'IDLE' || status === 'CANCELLED') && (
                 <motion.div
                     initial={{ y: '100%' }}
                     animate={{
                         y: 0,
-                        height: sheetState === 'SEARCHING' ? '100%' : 'auto'
+                        height: sheetState === 'SEARCHING' ? '100%' : '55vh' // Fill remaining space (100 - 45 = 55)
                     }}
                     transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                    className={`absolute bottom-0 left-0 right-0 z-[600] bg-white shadow-[0_-10px_40px_rgba(0,0,0,0.15)] flex flex-col ${sheetState === 'SEARCHING' ? 'rounded-none' : 'rounded-t-[2rem]'}`}
+                    className={`relative z-[600] bg-white shadow-[0_-10px_40px_rgba(0,0,0,0.15)] flex flex-col flex-1 ${sheetState === 'SEARCHING' ? 'rounded-none absolute inset-0' : 'rounded-t-[2rem] -mt-6'}`}
                 >
                     {/* Search Handle / Header */}
                     <div className="w-full flex justify-center pt-3 pb-2 cursor-pointer" onClick={() => {
@@ -750,34 +738,21 @@ export default function HomePassenger() {
 
                     <div className="flex-1 flex flex-col px-6 pb-safe overflow-hidden">
 
-                        {/* IDLE STATE: Simple Prompt */}
+                        {/* IDLE STATE: Service Grid Entry Point */}
                         {sheetState === 'IDLE' && (
-                            <div className="pb-8 pt-2" onClick={handleStartSearch}>
-                                <h2 className="text-xl font-bold mb-4 text-[#101b0d]">Para onde vamos?</h2>
-                                <div className="bg-gray-100 rounded-2xl p-4 flex items-center gap-3 text-gray-500 shadow-inner">
-                                    <Search size={20} />
-                                    <span className="font-medium">Toque para pesquisar destino</span>
+                            <div className="h-full flex flex-col pt-2 pb-safe">
+                                {/* Welcome / Action Prompt */}
+                                <div className="px-6 mb-2">
+                                    <h2 className="text-xl font-bold text-[#101b0d]">Para onde vamos?</h2>
+                                    <p className="text-xs text-gray-500">Escolha como pretende viajar hoje</p>
                                 </div>
-                                {/* Quick Shortcuts Row */}
-                                <div className="flex gap-4 mt-6 overflow-x-auto no-scrollbar pb-2">
-                                    <button
-                                        onClick={() => handleSavedPlaceClick('home')}
-                                        className="flex flex-col items-center gap-2 min-w-[70px]"
-                                    >
-                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${savedPlaces.find(p => p.type === 'home') ? 'bg-green-100 text-green-700' : 'bg-green-50 text-green-600'}`}>
-                                            <MapPin size={24} />
-                                        </div>
-                                        <span className="text-xs font-bold text-gray-600">Casa</span>
-                                    </button>
-                                    <button
-                                        onClick={() => handleSavedPlaceClick('work')}
-                                        className="flex flex-col items-center gap-2 min-w-[70px]"
-                                    >
-                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${savedPlaces.find(p => p.type === 'work') ? 'bg-blue-100 text-blue-700' : 'bg-blue-50 text-blue-600'}`}>
-                                            <Briefcase size={24} />
-                                        </div>
-                                        <span className="text-xs font-bold text-gray-600">Trabalho</span>
-                                    </button>
+
+                                {/* Componentized Grid (Block 8.3) */}
+                                <div className="flex-1 min-h-0 w-full">
+                                    <ServiceGrid onSelectService={(id) => {
+                                        setSelectedService(id);
+                                        setSheetState('SEARCHING');
+                                    }} />
                                 </div>
                             </div>
                         )}

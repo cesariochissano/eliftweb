@@ -1,0 +1,37 @@
+:root {
+  /* Block 8.2 - Strict Mobile Heights */
+  --h-nav-header: 10vh;
+  --h-map-view: 45vh;
+  --h-sheet-collapsed: 20vh;
+  --h-sheet-expanded: 38vh;
+  --h-primary-btn: 56px; /* Approx 8-10% of standard screen */
+}
+
+/* Utility Classes */
+.h-nav-header {
+  height: var(--h-nav-header);
+}
+
+.h-map-view {
+  height: var(--h-map-view);
+  width: 100%;
+}
+
+.h-sheet-collapsed {
+  height: var(--h-sheet-collapsed);
+}
+
+.h-sheet-expanded {
+  height: var(--h-sheet-expanded);
+}
+
+/* Base Mobile Container - Prevents scrolling on the main view */
+.mobile-view-container {
+  height: 100vh;
+  height: 100dvh; /* Dynamic viewport height for mobile browsers */
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}

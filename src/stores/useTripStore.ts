@@ -196,14 +196,28 @@ export const useTripStore = create<TripState>()(
             },
 
             rehydrateActiveTrip: async () => {
+                // 1. Auth Check with Zombie Prevention
                 const { data: { user } } = await supabase.auth.getUser();
-                if (!user) return;
+                if (!user) {
+                    // If no authenticated user, we definitely shouldn't have an active trip state
+                    if (get().status !== 'IDLE') {
+                        console.log('[Rehydration] No user found, clearing zombie state.');
+                        get().resetTrip();
+                    }
+                    return;
+                }
 
                 set({ isSyncing: true });
                 const role = get().userRole;
 
                 try {
-                    // Try to find an active trip for this user
+                    // 2. Cascade Cleanup: Never allow terminal states to persist on reload
+                    if (['COMPLETED', 'CANCELLED'].includes(get().status)) {
+                        console.log('[Rehydration] Found terminal state in storage, forcing reset.');
+                        get().resetTrip();
+                    }
+
+                    // 3. Fetch Active Trip from DB (Source of Truth)
                     const query = supabase.from('trips').select('*');
 
                     if (role === 'DRIVER') {
@@ -215,7 +229,13 @@ export const useTripStore = create<TripState>()(
                     const { data: trip, error } = await query.order('created_at', { ascending: false }).limit(1).maybeSingle();
 
                     if (!error && trip) {
-                        console.log('[Rehydration] Active trip found:', trip.id, trip.status);
+                        // Trip is ALIVE in DB
+                        console.log('[Rehydration] Active trip synced:', trip.id, trip.status);
+
+                        // Strict Versioning Check (Optional but good)
+                        // const localVersion = get().tripVersion;
+                        // if (trip.trip_version > localVersion) ... 
+
                         set({
                             status: trip.status,
                             tripDetails: get().mapTripToDetails(trip),
@@ -223,10 +243,12 @@ export const useTripStore = create<TripState>()(
                         });
                         get().subscribeToTrips();
                         get().logEvent(trip.id, 'RESTORED', { status: trip.status });
-                    } else if (!trip && get().status !== 'IDLE') {
-                        // Trip ended while offline
-                        console.log('[Rehydration] No active trip found in DB, resetting local state.');
-                        get().resetTrip();
+                    } else {
+                        // Trip is DEAD or NON-EXISTENT in DB
+                        if (get().status !== 'IDLE') {
+                            console.log('[Rehydration] Local trip not found in DB (Zombie), killing it.');
+                            get().resetTrip();
+                        }
                     }
                 } catch (err) {
                     console.error('[Rehydration] Failed:', err);
