@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '../ui/button';
 import car3d from '../../assets/3d/car_3d.png';
 import { supabase } from '../../lib/supabase';
@@ -28,21 +28,17 @@ export const RecentActivityList = () => {
             }
 
             // Fetch last 2 completed trips
-            // Note: In a real app we would join with 'drivers' table to get name/avatar. 
-            // For now we will display generic driver info if join is complex, or try to select if relation exists.
-            // Assuming simple fetch first.
-            const { data, error } = await supabase
+            const { data } = await supabase
                 .from('trips')
                 .select('*, driver:drivers(first_name, avatar_url, car_model, license_plate)')
                 .eq('passenger_id', user.id)
-                .in('status', ['COMPLETED', 'You can include others']) // Typically just COMPLETED
                 .eq('status', 'COMPLETED')
                 .order('created_at', { ascending: false })
                 .limit(2);
 
             if (data) {
                 // Map to UI format
-                const formatted = data.map(t => ({
+                const formatted = data.map((t: any) => ({
                     id: t.id,
                     driver: t.driver?.first_name || 'Motorista eLift',
                     code: t.driver?.license_plate || 'ELIFT',
