@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Button } from '../ui/button';
 import car3d from '../../assets/3d/car_3d.png';
 

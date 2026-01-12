@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '../../components/ui/button';
 import { HomeDashboard } from '../../components/home/HomeDashboard';
 import { TripNotification, type NotificationType } from '../../components/ui/trip-notification';
-import { ServiceCard } from '../../components/ui/service-card';
 import { Input } from '../../components/ui/input';
 import Map from '../../components/map/Map';
 import { ChatDrawer } from '../../components/ui/chat-drawer';
