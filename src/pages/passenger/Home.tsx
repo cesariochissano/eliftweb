@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { MapPin, User, Car, Bike, Phone, MessageSquare, X, AlertCircle, Clock, Bot, Menu, Ticket, Briefcase, Truck, Shield, Share2, Zap } from 'lucide-react';
+import { MapPin, Car, Bike, Phone, MessageSquare, X, AlertCircle, Clock, Ticket, Briefcase, Truck, Shield, Share2, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '../../components/ui/button';
 import { HomeDashboard } from '../../components/home/HomeDashboard';
+import { TripNotification, type NotificationType } from '../../components/ui/trip-notification';
 import { ServiceCard } from '../../components/ui/service-card';
 import { Input } from '../../components/ui/input';
 import Map from '../../components/map/Map';
@@ -15,6 +16,7 @@ import { supabase } from '../../lib/supabase';
 import { EliftIntelligence } from '../../lib/elift-intelligence';
 import usePlacesAutocomplete, { getGeocode, getLatLng } from "use-places-autocomplete";
 import { useGoogleMapsLoader } from '../../hooks/useGoogleMapsLoader';
+import { useBackHandler } from '../../hooks/useBackHandler';
 
 // Services Configuration
 const SERVICES = [
@@ -182,6 +184,24 @@ export default function HomePassenger() {
     // Payment State
     const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'WALLET'>('CASH');
     const [isAiOpen, setIsAiOpen] = useState(false);
+
+    // Notification State
+    const [notification, setNotification] = useState<{ visible: boolean; message: string; subMessage?: string; type: NotificationType }>({
+        visible: false,
+        message: '',
+        type: 'default'
+    });
+
+    // Monitor Status Changes for Notifications
+    useEffect(() => {
+        if (status === 'ACCEPTED') {
+            setNotification({ visible: true, message: 'Motorista Encontrado!', subMessage: 'João está a caminho.', type: 'success' });
+        } else if (status === 'ARRIVED') {
+            setNotification({ visible: true, message: 'Motorista Chegou!', subMessage: 'Encontre o motorista no ponto de recolha.', type: 'arrival' });
+        } else if (status === 'COMPLETED') {
+            setNotification({ visible: true, message: 'Viagem Terminada', subMessage: 'Obrigado por escolher a eLift.', type: 'info' });
+        }
+    }, [status]);
 
 
 
@@ -620,6 +640,32 @@ export default function HomePassenger() {
     // Calculate drag constraints or snap points based on window height potentially,
     // but for now strict states are safer.
 
+    // Bloco 8.5: Back Stack Management (Prevent Accidental Exit)
+    useBackHandler(() => {
+        // 1. Close Modals / Overlays
+        if (showCancelConfirm) { setShowCancelConfirm(false); return true; }
+        if (isConfirming) { setIsConfirming(false); return true; }
+        if (isChatOpen) { setIsChatOpen(false); return true; }
+        if (isAiOpen) { setIsAiOpen(false); return true; }
+        if (showTipModal) { setShowTipModal(false); return true; }
+        if (globalError) { setGlobalError(null); return true; }
+
+        // 2. Collapse Bottom Sheet
+        if (sheetState !== 'IDLE') {
+            handleCloseSearch();
+            return true;
+        }
+
+        // 3. Prevent Exit during Active Trip (Keep App Open)
+        // Only allow exit if IDLE or Completed/Cancelled (and sheet is IDLE)
+        if (status !== 'IDLE' && status !== 'COMPLETED' && status !== 'CANCELLED') {
+            return true; // Block back button to keep user in trip view
+        }
+
+        // Allow default behavior (exit app / go back) if we are effectively IDLE
+        return false;
+    });
+
     return (
         <div className="mobile-view-container bg-gray-100">
             {/* Debug Tag: V2.2 - Block 8 Standards */}
@@ -858,77 +904,126 @@ export default function HomePassenger() {
                         )}
 
                         {/* SELECTING STATE: Services & Payment */}
+                        {/* SELECTING STATE: Services & Payment (New Design) */}
                         {sheetState === 'SELECTING' && activeService && (
-                            <div className="flex flex-col h-full pt-2 animate-in fade-in slide-in-from-bottom-10 duration-500">
+                            <div className="flex flex-col h-full pt-0 animate-in fade-in slide-in-from-bottom-10 duration-500">
 
-                                {/* Route Summary (Clickable for Edit) */}
-                                <div
-                                    onClick={() => setSheetState('SEARCHING')}
-                                    className="bg-gray-50 rounded-xl p-3 mb-4 flex flex-col gap-2 cursor-pointer border border-transparent hover:border-gray-200 transition-all active:scale-[0.98]"
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-2 h-2 bg-green-500 rounded-full shrink-0" />
-                                        <p className="text-xs font-medium text-gray-700 truncate flex-1">{pickup?.address || 'Definir partida'}</p>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-2 h-2 bg-black rounded-full shrink-0" />
-                                        <p className="text-xs font-medium text-gray-900 truncate flex-1">{destination?.address || 'Definir destino'}</p>
-                                        <span className="text-[10px] font-bold text-primary uppercase bg-primary/10 px-2 py-0.5 rounded ml-auto">Editar</span>
-                                    </div>
-                                </div>
+                                {/* Pull Indicator (Visual only, sheet handles drag) */}
+                                <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6" />
 
-                                <div className="flex items-center justify-between mb-4">
-                                    <div>
-                                        <h2 className="text-lg font-bold text-[#101b0d]">Escolha o Serviço</h2>
-                                        <p className="text-xs text-gray-500">Distância: {Math.round(calculateDistance(pickup?.lat || 0, pickup?.lng || 0, destination?.lat || 0, destination?.lng || 0))} km</p>
-                                    </div>
-                                    {/* Promo Badge */}
-                                    {activePromo ? (
-                                        <div className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-                                            <Ticket size={12} /> {activePromo.code}
+                                {/* 1. Route Info Card (Vertical Flow) */}
+                                <div className="bg-gray-50 rounded-[1.5rem] p-4 mb-6 relative">
+                                    <div className="flex items-start gap-4">
+                                        {/* Route Visualizer */}
+                                        <div className="flex flex-col items-center pt-1.5">
+                                            <div className="w-3 h-3 bg-[#10d772] rounded-full shadow-[0_0_0_2px_white] z-10" />
+                                            <div className="w-0.5 h-10 border-l-2 border-dashed border-gray-300 my-0.5" />
+                                            <div className="w-3 h-3 bg-black rounded-full shadow-[0_0_0_2px_white] z-10" />
                                         </div>
-                                    ) : (
-                                        <button onClick={() => navigate('/passenger/promotions')} className="text-xs font-bold text-primary hover:underline">
-                                            Adicionar Promo
+
+                                        {/* Addresses */}
+                                        <div className="flex-1 flex flex-col gap-4">
+                                            <div className="h-8 flex items-center border-b border-gray-100 pb-2">
+                                                <p className="text-sm font-medium text-gray-900 truncate pr-2">
+                                                    {pickup?.address ? pickup.address.split(',')[0] : 'Local de partida'}
+                                                </p>
+                                            </div>
+                                            <div className="h-4 flex items-center">
+                                                <p className="text-sm font-medium text-gray-900 truncate pr-2">
+                                                    {destination?.address ? destination.address.split(',')[0] : 'Destino'}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* Edit Button */}
+                                        <button
+                                            onClick={() => setSheetState('SEARCHING')}
+                                            className="bg-[#10d772]/10 hover:bg-[#10d772]/20 text-[#10d772] px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide transition-colors self-start mt-1"
+                                        >
+                                            Editar
                                         </button>
-                                    )}
+                                    </div>
                                 </div>
 
-                                <div className="flex gap-3 overflow-x-auto pb-6 pt-1 -mx-6 px-6 no-scrollbar snap-x">
-                                    {SERVICES.map((item) => (
-                                        <div key={item.id} className="min-w-[140px] h-[170px] snap-center first:pl-2 last:pr-2">
-                                            <ServiceCard
-                                                key={item.id}
-                                                title={item.title}
-                                                description={item.desc}
-                                                icon={item.icon}
-                                                selected={selectedService === item.id}
-                                                onClick={() => setSelectedService(item.id)}
-                                                price={isValidPrice(getPriceForService(item.id)) ? `${getPriceForService(item.id)} MT` : '---'}
-                                            />
-                                        </div>
-                                    ))}
+                                {/* 2. Services Selector */}
+                                <div className="mb-6">
+                                    <div className="flex items-center justify-between mb-3 px-1">
+                                        <h2 className="text-lg font-bold text-[#101b0d]">Escolha o Serviço</h2>
+                                        {/* Distance Info as Tag */}
+                                        <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-1 rounded-full font-bold">
+                                            {Math.round(calculateDistance(pickup?.lat || 0, pickup?.lng || 0, destination?.lat || 0, destination?.lng || 0))} km
+                                        </span>
+                                    </div>
+
+                                    <div className="flex gap-3 overflow-x-auto pb-4 -mx-6 px-6 no-scrollbar snap-x">
+                                        {SERVICES.map((item) => {
+                                            const isSelected = selectedService === item.id;
+                                            return (
+                                                <button
+                                                    key={item.id}
+                                                    onClick={() => setSelectedService(item.id)}
+                                                    className={`
+                                                        min-w-[120px] h-[140px] snap-center rounded-[1.5rem] p-3 flex flex-col items-center justify-center gap-2 border-2 transition-all relative
+                                                        ${isSelected
+                                                            ? 'border-gray-100 bg-white shadow-lg scale-100 z-10 ring-1 ring-black/5'
+                                                            : 'border-transparent bg-gray-50 scale-95 opacity-70 grayscale-[0.5]'}
+                                                    `}
+                                                >
+                                                    {/* Selection Indicator */}
+                                                    {isSelected && <div className="absolute top-3 right-3 w-4 h-4 rounded-full bg-[#10d772] flex items-center justify-center">
+                                                        <div className="w-1.5 h-1.5 bg-white rounded-full" />
+                                                    </div>}
+
+                                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-1 ${isSelected ? 'bg-[#10d772]/10 text-[#10d772]' : 'bg-white text-gray-400'}`}>
+                                                        <item.icon size={24} />
+                                                    </div>
+
+                                                    <div className="text-center">
+                                                        <p className={`font-bold text-sm ${isSelected ? 'text-gray-900' : 'text-gray-500'}`}>{item.title}</p>
+                                                        <p className="text-[10px] text-gray-400 mt-0.5 line-clamp-2 leading-tight px-1">{item.desc}</p>
+                                                    </div>
+
+                                                    <div className="mt-auto">
+                                                        <span className={`font-extrabold text-sm ${isSelected ? 'text-gray-900' : 'text-gray-400'}`}>
+                                                            {isValidPrice(getPriceForService(item.id)) ? `${getPriceForService(item.id)} MT` : '---'}
+                                                        </span>
+                                                    </div>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
 
-                                <div className="mt-auto pt-4 border-t border-gray-50">
-                                    <div className="flex items-center gap-2 mb-4 overflow-x-auto">
+                                {/* 3. Payment & Action (Bottom Section) */}
+                                <div className="mt-auto">
+                                    {/* Payment Selector */}
+                                    <div className="flex gap-3 mb-4">
                                         <button
                                             onClick={() => setPaymentMethod('CASH')}
-                                            className={`flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-bold transition-all ${paymentMethod === 'CASH' ? 'border-primary bg-primary/10 text-black' : 'border-gray-200 text-gray-500'}`}
+                                            className={`flex-1 h-12 flex items-center justify-center gap-2 rounded-xl text-sm font-bold border-2 transition-all
+                                                ${paymentMethod === 'CASH'
+                                                    ? 'border-[#10d772] bg-[#10d772]/10 text-gray-900'
+                                                    : 'border-gray-100 bg-white text-gray-500 hover:bg-gray-50'}
+                                            `}
                                         >
                                             <span>💵</span> Dinheiro
                                         </button>
                                         <button
                                             onClick={() => setPaymentMethod('WALLET')}
-                                            className={`flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-bold transition-all ${paymentMethod === 'WALLET' ? 'border-[#3ae012] bg-[#3ae012]/10 text-black' : 'border-gray-200 text-gray-500'}`}
+                                            className={`flex-1 h-12 flex items-center justify-center gap-2 rounded-xl text-sm font-bold border-2 transition-all
+                                                ${paymentMethod === 'WALLET'
+                                                    ? 'border-[#3ae012] bg-[#3ae012]/10 text-gray-900'
+                                                    : 'border-gray-100 bg-white text-gray-500 hover:bg-gray-50'}
+                                            `}
                                         >
-                                            <span className="text-lg">💳</span> LiftCard
+                                            <span className="text-base">💳</span> LiftCard
                                         </button>
                                     </div>
 
+                                    {/* Primary Action Button */}
                                     <Button
                                         size="lg"
-                                        className="w-full h-14 text-lg rounded-2xl shadow-xl shadow-black/5"
+                                        className="w-full h-14 rounded-3xl bg-black text-white font-bold text-lg shadow-xl shadow-black/20 hover:bg-gray-900 active:scale-[0.98] transition-all"
                                         onClick={handleRequestTrip}
                                         disabled={!isOnline || !isValidPrice(getPriceForService(selectedService))}
                                     >
@@ -939,7 +1034,8 @@ export default function HomePassenger() {
                                                 : 'Calculando Preço...'
                                         }
                                     </Button>
-                                    <p className="text-center text-[10px] text-gray-400 mt-2">
+
+                                    <p className="text-center text-[10px] text-gray-400 mt-3 pb-safe">
                                         Ao confirmar, aceita os termos e condições da eLift.
                                     </p>
                                 </div>
@@ -1000,26 +1096,85 @@ export default function HomePassenger() {
                 </div>
             )}
 
-            {/* REQUESTING OVERLAY */}
-            {status === 'REQUESTING' && (
-                <div className="absolute inset-0 z-[800] bg-white flex flex-col items-center justify-center p-6 animate-in fade-in duration-300">
-                    <div className="w-24 h-24 relative mb-8">
-                        <div className="absolute inset-0 border-8 border-gray-100 rounded-full"></div>
-                        <div className="absolute inset-0 border-8 border-primary border-t-transparent rounded-full animate-spin"></div>
-                    </div>
-                    <h2 className="text-2xl font-bold mb-2">A procurar motorista...</h2>
-                    <p className="text-gray-500 text-center mb-10 max-w-xs">Notificando motoristas próximos de si. Aguarde um momento.</p>
+            {/* NOTIFICATION TOAST */}
+            <TripNotification
+                isVisible={notification.visible}
+                message={notification.message}
+                subMessage={notification.subMessage}
+                type={notification.type}
+                onClose={() => setNotification(prev => ({ ...prev, visible: false }))}
+            />
 
-                    <Button variant="outline" className="w-full h-14 border-red-100 text-red-500 font-bold rounded-2xl" onClick={() => setShowCancelConfirm(true)}>
-                        Cancelar Pedido
-                    </Button>
+            {/* CONFIRMATION SCREEN (Review) */}
+            {isConfirming && orderSummary && (
+                <div className="absolute inset-0 z-[700] bg-black/20 backdrop-blur-sm flex flex-col justify-end">
+                    <div className="bg-white rounded-t-[2rem] p-6 shadow-2xl animate-in slide-in-from-bottom duration-300">
+                        {/* ... Existing Confirmation Content ... */}
+                        <div className="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-6" />
+
+                        <div className="text-center mb-8">
+                            <p className="text-gray-500 text-sm font-medium mb-1">Total a Pagar</p>
+                            <div className="flex flex-col items-center">
+                                {orderSummary.originalPrice && (
+                                    <span className="text-lg text-gray-400 line-through decoration-red-500 decoration-2 font-bold select-none">
+                                        {orderSummary.originalPrice} MZN
+                                    </span>
+                                )}
+                                <h2 className="text-4xl font-black text-gray-900 flex items-center gap-2">
+                                    {(orderSummary.price || 0).toLocaleString()} <span className="text-xl text-gray-400 font-bold">MZN</span>
+                                </h2>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-[auto_1fr] gap-3">
+                            <Button variant="secondary" className="w-14 h-14 rounded-2xl flex items-center justify-center p-0" onClick={() => setIsConfirming(false)}>
+                                <X size={24} />
+                            </Button>
+                            <Button
+                                size="lg"
+                                className="h-14 text-lg font-bold rounded-2xl shadow-lg shadow-primary/20"
+                                onClick={handleConfirmTrip}
+                                disabled={!isOnline || !orderSummary || !isValidPrice(orderSummary.price) || isActionLoading}
+                            >
+                                {isActionLoading ? (
+                                    <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                ) : (
+                                    !isOnline ? 'Sem Conexão' : 'Chamar Motorista Agora'
+                                )}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* REQUESTING / SEARCHING DRIVER - BOTTOM SHEET (Not Full Screen) */}
+            {status === 'REQUESTING' && (
+                <div className="absolute bottom-0 left-0 right-0 z-[800] bg-white rounded-t-[2rem] shadow-[0_-10px_60px_rgba(0,0,0,0.1)] p-6 pb-safe animate-in slide-in-from-bottom duration-300">
+                    <div className="flex items-center gap-6">
+                        <div className="w-16 h-16 relative shrink-0">
+                            <div className="absolute inset-0 border-4 border-gray-100 rounded-full"></div>
+                            <div className="absolute inset-0 border-4 border-[#10d772] border-t-transparent rounded-full animate-spin"></div>
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <Car size={24} className="text-[#10d772]" />
+                            </div>
+                        </div>
+                        <div className="flex-1">
+                            <h2 className="text-xl font-bold text-[#101b0d] mb-1">A procurar motorista...</h2>
+                            <p className="text-xs text-gray-500 leading-relaxed">Notificando motoristas próximos. Mantenha o app aberto.</p>
+                        </div>
+                    </div>
+
+                    <div className="mt-8">
+                        <Button variant="outline" className="w-full h-12 border-red-100 text-red-500 font-bold rounded-xl hover:bg-red-50" onClick={() => setShowCancelConfirm(true)}>
+                            Cancelar Pedido
+                        </Button>
+                    </div>
                 </div>
             )}
 
             {/* ACTIVE TRIP OVERLAY */}
             {(status === 'ACCEPTED' || status === 'ARRIVED' || status === 'IN_PROGRESS' || status === 'COMPLETED') && tripDetails && (
                 <div className="absolute bottom-0 left-0 right-0 z-[600] bg-white rounded-t-[2rem] shadow-[0_-10px_60px_rgba(0,0,0,0.1)] pb-safe animate-in slide-in-from-bottom duration-500">
-                    {/* ... Existing Active Trip Content ... */}
                     <div className="p-6">
                         <div className="flex items-center justify-between mb-6">
                             <div className="flex items-center gap-4">
@@ -1225,7 +1380,6 @@ export default function HomePassenger() {
             )}
 
             {/* Cancel Confirmation Modal */}
-            {/* ... Existing Cancel Modal ... */}
             {showCancelConfirm && (
                 <div className="absolute inset-0 z-[2000] bg-black/50 backdrop-blur-sm flex items-center justify-center p-6">
                     <div className="bg-white rounded-3xl p-6 w-full max-w-sm">
@@ -1255,9 +1409,6 @@ export default function HomePassenger() {
                     </div>
                 </div>
             )}
-
-            {/* CANCEL CONFIRMATION MODAL - Using existing state logic if applicable or the one above */}
-            {/* Note: We used showCancelConfirm above with a simpler design. We can stick to that. */}
 
         </div>
     );

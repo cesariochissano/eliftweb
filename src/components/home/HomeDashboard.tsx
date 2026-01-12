@@ -1,8 +1,8 @@
 import React from 'react';
-import { User, Menu, MapPin, CalendarClock, ChevronRight } from 'lucide-react';
+import { MapPin, CalendarClock } from 'lucide-react';
 import { Button } from '../ui/button';
 import { ServiceGrid } from './ServiceGrid';
-import { motion } from 'framer-motion';
+import { RecentActivityList } from './RecentActivityList';
 
 interface HomeDashboardProps {
     userName: string;
@@ -17,7 +17,6 @@ interface HomeDashboardProps {
 
 export const HomeDashboard: React.FC<HomeDashboardProps> = ({
     userName,
-    greeting,
     userAvatar,
     currentAddress,
     onMenuClick,
@@ -26,72 +25,82 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
     onRequestClick
 }) => {
     return (
-        <div className="w-full h-full flex flex-col bg-gray-50/95 backdrop-blur-sm relative z-[1000]">
-
-            {/* 1. Header (~9%) */}
-            <header className="h-[9%] px-4 flex items-center justify-between pt-safe">
-                <Button variant="ghost" size="icon" className="rounded-full" onClick={onMenuClick}>
-                    <Menu size={24} className="text-[#101b0d]" />
-                </Button>
-                <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden border border-white shadow-sm" onClick={onMenuClick}>
-                    {userAvatar ? (
-                        <img src={userAvatar} alt="Profile" className="w-full h-full object-cover" />
-                    ) : (
-                        <User size={20} className="text-gray-500 m-auto mt-2.5" />
-                    )}
-                </div>
-            </header>
-
-            {/* 2. Greeting Zone (~6%) */}
-            <div className="h-[6%] px-6 flex flex-col justify-center">
-                <h1 className="text-lg font-bold text-[#101b0d] leading-tight">
-                    {greeting}, <span className="capitalize">{userName || 'Passageiro'}</span>
-                </h1>
-                <p className="text-xs text-gray-500 font-medium">Para onde vamos?</p>
-            </div>
-
-            {/* 3. Context Zone (~12%) - Mini Map Static */}
-            <div className="h-[12%] px-4 py-1">
-                <div className="w-full h-full rounded-[1.2rem] bg-white border border-gray-100 shadow-sm overflow-hidden relative flex items-center px-4 gap-3">
-                    {/* Fake Map Background */}
-                    <div className="absolute inset-0 bg-gray-200 opacity-50 bg-[url('https://cartodb-basemaps-a.global.ssl.fastly.net/light_all/14/9764/9876.png')] bg-cover bg-center grayscale contrast-50 opacity-30 blur-[1px]" />
-
-                    {/* Icon */}
-                    <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center shrink-0 z-10 shadow-lg">
-                        <MapPin size={16} className="text-[#10d772]" />
+        <div className="w-full h-full flex flex-col bg-white relative overflow-hidden">
+            <div className="flex-1 flex flex-col overflow-y-auto pb-24 no-scrollbar">
+                {/* 1. Header & Greeting */}
+                <header className="px-6 flex items-center justify-between pt-safe mt-4 mb-2">
+                    <h1 className="text-3xl font-extrabold text-[#101b0d] tracking-tight">
+                        Olá, <span className="capitalize">{userName ? userName.split(' ')[0] : 'Newton'}</span>
+                    </h1>
+                    <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-sm" onClick={onMenuClick}>
+                        {userAvatar ? (
+                            <img src={userAvatar} alt="Profile" className="w-full h-full object-cover" />
+                        ) : (
+                            <img src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=100&h=100&fit=crop" alt="Profile" className="w-full h-full object-cover" />
+                        )}
                     </div>
+                </header>
 
-                    {/* Text */}
-                    <div className="z-10 flex-1 min-w-0">
-                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Localização Atual</p>
-                        <p className="text-xs font-bold text-[#101b0d] truncate leading-tight mt-0.5">
-                            {currentAddress || 'Maputo, Moçambique'}
-                        </p>
-                    </div>
+                {/* 2. Map Banner / "Para onde vamos?" */}
+                <div className="px-6 mb-6">
+                    <button
+                        onClick={onRequestClick}
+                        className="w-full aspect-[2/1] bg-gray-100 rounded-[1.8rem] relative overflow-hidden flex flex-col items-start justify-center p-6 shadow-sm group active:scale-[0.98] transition-all"
+                    >
+                        {/* Map Background */}
+                        <div className="absolute inset-0 bg-[url('https://cartodb-basemaps-a.global.ssl.fastly.net/light_all/14/9764/9876.png')] bg-cover bg-center grayscale opacity-60 mix-blend-multiply" />
 
-                    <ChevronRight size={16} className="text-gray-400 z-10" />
+                        {/* 3D Map Pin Decor */}
+                        <div className="absolute right-12 top-1/2 -translate-y-1/2">
+                            <div className="relative">
+                                <div className="w-4 h-4 bg-green-500 rounded-full animate-ping absolute top-0 left-1/2 -translate-x-1/2 opacity-20" />
+                                <MapPin size={48} className="text-[#10D772] fill-current drop-shadow-xl" />
+                                <div className="w-12 h-12 bg-green-500/20 blur-xl rounded-full absolute top-8 left-0" />
+                            </div>
+                        </div>
+
+                        <div className="relative z-10 bg-white/80 backdrop-blur-md px-4 py-3 rounded-2xl shadow-sm border border-white/50">
+                            <h2 className="text-lg font-bold text-[#101b0d]">Para onde vamos?</h2>
+                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mt-0.5 max-w-[150px] truncate">
+                                {currentAddress || 'Localizando...'}
+                            </p>
+                        </div>
+                    </button>
                 </div>
+
+                {/* 3. Service Grid (3 Cols) */}
+                <div className="px-6 mb-4">
+                    <ServiceGrid onSelectService={onServiceSelect} />
+                </div>
+
+                {/* 4. Recent Activity List */}
+                <div className="px-6">
+                    <RecentActivityList />
+                </div>
+
+                {/* Spacer for Fixed Footer */}
+                <div className="h-4" />
             </div>
 
-            {/* 4. Service Grid Zone (~45%) */}
-            <div className="h-[45%]">
-                <ServiceGrid onSelectService={onServiceSelect} />
-            </div>
-
-            {/* 5. Actions Zone (~10%) */}
-            <div className="flex-1 px-4 flex items-center justify-between gap-3 pb-safe">
-                <Button
-                    className="flex-1 h-14 bg-black hover:bg-black/90 text-white rounded-[1rem] font-bold text-sm shadow-lg shadow-black/20"
-                    onClick={onRequestClick}
-                >
-                    Pedir Lift agora
-                </Button>
+            {/* 5. Fixed Footer Actions */}
+            <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-50 p-6 pb-safe pt-4 flex gap-3 z-[1000] shadow-[0_-10px_40px_rgba(0,0,0,0.03)]">
                 <Button
                     variant="outline"
-                    className="h-14 w-14 rounded-[1rem] border-gray-200 bg-white hover:bg-gray-50 shadow-sm flex flex-col items-center justify-center gap-0.5"
+                    className="flex-1 h-14 rounded-[1.5rem] border-2 border-[#101b0d] hover:bg-[#101b0d] hover:text-white font-bold text-sm text-[#101b0d] transition-all"
                     onClick={onScheduleClick}
                 >
-                    <CalendarClock size={20} className="text-gray-900" />
+                    <CalendarClock size={20} className="mr-2" />
+                    Agendar Lift
+                </Button>
+                <Button
+                    className="flex-[1.5] h-14 rounded-[1.5rem] bg-[#101b0d] hover:bg-black/90 text-white font-extrabold text-sm shadow-xl shadow-green-900/10"
+                    onClick={() => {
+                        onServiceSelect('drive'); // Default to drive
+                        onRequestClick();
+                    }}
+                >
+                    <div className="w-2 h-2 rounded-full bg-[#10d772] mr-2 animate-pulse" />
+                    Pedir Lift Agora
                 </Button>
             </div>
         </div>
