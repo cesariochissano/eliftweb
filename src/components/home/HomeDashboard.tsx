@@ -61,10 +61,10 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
             variants={containerVariants}
             initial="hidden"
             animate="show"
-            className="h-screen flex flex-col bg-gray-50 relative overflow-hidden"
+            className="h-[100dvh] flex flex-col bg-gray-50 relative overflow-hidden"
         >
-            {/* Scrollable Content */}
-            <div className="flex-1 flex flex-col overflow-y-auto no-scrollbar pb-safe w-full">
+            {/* Scrollable Content - Added massive padding bottom to clear fixed footer */}
+            <div className="flex-1 flex flex-col overflow-y-auto no-scrollbar pb-[120px] w-full">
                 <div className="w-full max-w-[1200px] mx-auto flex flex-col">
 
                     {/* Header Item */}
@@ -95,8 +95,37 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                             onClick={onRequestClick}
                             className="w-full h-[clamp(180px,32vh,300px)] bg-[#101b0d] rounded-[2.5rem] relative overflow-hidden flex flex-col items-start justify-end p-8 shadow-2xl shadow-green-900/20 group active:scale-[0.98] transition-all"
                         >
-                            {/* Background Gradients & Breathing Effect */}
+                            {/* Background Gradients */}
                             <div className="absolute inset-0 bg-gradient-to-br from-[#101b0d] via-[#0a1208] to-[#000000]" />
+
+                            {/* Urban Flow Effect (Traffic Bokeh) */}
+                            {[...Array(6)].map((_, i) => (
+                                <motion.div
+                                    key={i}
+                                    initial={{
+                                        opacity: 0,
+                                        y: '100%',
+                                        x: `${Math.random() * 100}%`
+                                    }}
+                                    animate={{
+                                        opacity: [0, 0.4, 0],
+                                        y: ['100%', '-20%']
+                                    }}
+                                    transition={{
+                                        duration: Math.random() * 5 + 5, // 5-10s slow flow
+                                        repeat: Infinity,
+                                        delay: Math.random() * 5,
+                                        ease: "linear"
+                                    }}
+                                    className="absolute w-24 h-24 rounded-full blur-[40px]"
+                                    style={{
+                                        background: i % 2 === 0 ? 'rgba(255,255,255,0.1)' : 'rgba(16, 215, 114, 0.15)', // White & Green mix
+                                        width: Math.random() * 100 + 50 + 'px', // Random size
+                                    }}
+                                />
+                            ))}
+
+                            {/* Breathing Glow (Existing) */}
                             <motion.div
                                 animate={{ opacity: [0.2, 0.3, 0.2] }}
                                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
@@ -124,7 +153,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                                 </div>
 
                                 <div className="flex items-end justify-between w-full">
-                                    <h2 className="text-white text-[clamp(1.75rem,5vw,2.5rem)] font-bold leading-[1.1] max-w-[70%]">
+                                    <h2 className="text-white text-[clamp(1.75rem,5vw,2.5rem)] font-bold leading-[1.1] max-w-[calc(100%-80px)]">
                                         Encontre o seu <br />
                                         <span className="text-[#10d772]">melhor trajeto.</span>
                                     </h2>
@@ -154,7 +183,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                 initial={{ y: 50, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.4 }}
-                className="w-full bg-white border-t border-gray-100 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-5px_20px_rgba(0,0,0,0.03)] flex-shrink-0 z-30"
+                className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-5px_20px_rgba(0,0,0,0.03)] z-50"
             >
                 <div className="max-w-[1200px] mx-auto flex items-center gap-4">
                     <Button

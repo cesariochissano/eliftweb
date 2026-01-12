@@ -89,16 +89,9 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      const rolePaths: Record<string, string> = {
-        'PASSENGER': '/home',
-        'DRIVER': '/driver/dashboard',
-        'FLEET_MANAGER': '/fleet/dashboard',
-        'SUPER_ADMIN': '/admin',
-        'SERVICE_ADMIN': '/admin'
-      };
-
-      const targetPath = rolePaths[profile.role] || '/home';
-      navigate(targetPath);
+      // Universal Landing Rule: Everyone goes to Passenger Home by default
+      // Specialized dashboards (Admin, Driver) are accessed via Menu
+      navigate('/home');
     }
   }, [user, profile, initialized, location.pathname]);
 

@@ -648,16 +648,17 @@ export default function HomePassenger() {
         if (showTipModal) { setShowTipModal(false); return true; }
         if (globalError) { setGlobalError(null); return true; }
 
-        // 2. Collapse Bottom Sheet
-        if (sheetState !== 'IDLE') {
-            handleCloseSearch();
+        // 2. Navigation State Management
+        if (sheetState === 'SELECTING') {
+            // Back from Route View -> Go to Search to change destination
+            setDestination(null); // Clear destination to break useEffect loop
+            setSheetState('SEARCHING');
             return true;
         }
 
-        // 3. Prevent Exit during Active Trip (Keep App Open)
-        // Only allow exit if IDLE or Completed/Cancelled (and sheet is IDLE)
-        if (status !== 'IDLE' && status !== 'COMPLETED' && status !== 'CANCELLED') {
-            return true; // Block back button to keep user in trip view
+        if (sheetState === 'SEARCHING') {
+            handleCloseSearch();
+            return true;
         }
 
         // Allow default behavior (exit app / go back) if we are effectively IDLE
@@ -666,8 +667,7 @@ export default function HomePassenger() {
 
     return (
         <div className="mobile-view-container bg-gray-100">
-            {/* Debug Tag: V2.2 - Block 8 Standards */}
-            <div className="absolute top-2 right-2 z-[9999] text-[8px] text-gray-300 font-mono pointer-events-none">eLift v2.2 (MobileStd)</div>
+
 
             {/* Offline Banner */}
             {!isOnline && (
