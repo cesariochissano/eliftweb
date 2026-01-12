@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '../../components/ui/button';
 import { HomeDashboard } from '../../components/home/HomeDashboard';
+import { HomeSkeleton } from '../../components/home/HomeSkeleton';
+import { useAuthStore } from '../../stores/useAuthStore';
 import { TripNotification, type NotificationType } from '../../components/ui/trip-notification';
 import { Input } from '../../components/ui/input';
 import Map from '../../components/map/Map';
@@ -75,6 +77,18 @@ const formatAddress = (item: any) => {
 export default function HomePassenger() {
     const navigate = useNavigate();
     const { status, tripDetails, requestTrip, cancelTrip, resetTrip, activePromo, addTip, fetchSavedPlaces, savedPlaces, savePlace, isSyncing, isActionLoading, isSimulatingArrival, setSimulatingArrival, isWaitingActive, stopArrivalTime, updateWaitingTick } = useTripStore();
+    const { user, profile, initialized } = useAuthStore();
+
+    // 🟢 Regra de Ouro: Home só renderiza com dados prontos
+    const isHomeReady = initialized && !!user && !!profile;
+
+    if (!isHomeReady) {
+        return <HomeSkeleton />;
+    }
+
+    // Since we are ready, we can safely derive display names
+    const displayName = profile?.first_name || user?.email?.split('@')[0] || 'Passageiro';
+    const displayAvatar = profile?.avatar_url || null;
 
     console.log('[HomePassenger Render] Status:', status, 'Trip:', tripDetails?.id);
 
@@ -209,8 +223,6 @@ export default function HomePassenger() {
     // Geolocation & Drivers
     const { latitude, longitude } = useGeolocation(true);
     const [onlineDrivers, setOnlineDrivers] = useState<Array<{ id: string; lat: number; lng: number }>>([]);
-    const [userName, setUserName] = useState('');
-    const [userAvatar, setUserAvatar] = useState<string | null>(null);
     const [greeting, setGreeting] = useState('Olá');
 
     // Offline State
@@ -228,7 +240,6 @@ export default function HomePassenger() {
             window.removeEventListener('offline', handleOffline);
         };
     }, []);
-
     useEffect(() => {
         // Set Greeting based on time
         const hour = new Date().getHours();
@@ -236,18 +247,6 @@ export default function HomePassenger() {
         else if (hour < 18) setGreeting('Boa tarde');
         else setGreeting('Boa noite');
 
-        // Fetch User Name and Avatar
-        const fetchProfile = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                const { data } = await supabase.from('profiles').select('first_name, avatar_url').eq('id', user.id).single();
-                if (data) {
-                    if (data.first_name) setUserName(data.first_name);
-                    if (data.avatar_url) setUserAvatar(data.avatar_url);
-                }
-            }
-        };
-        fetchProfile();
         fetchSavedPlaces(); // Fetch Favorites
     }, []);
 
@@ -752,9 +751,9 @@ export default function HomePassenger() {
                         {sheetState === 'IDLE' && (
                             <div className="fixed inset-0 z-[1000] bg-gray-50">
                                 <HomeDashboard
-                                    userName={userName}
+                                    userName={displayName}
                                     greeting={greeting}
-                                    userAvatar={userAvatar}
+                                    userAvatar={displayAvatar}
                                     currentAddress={pickup?.address || 'Localizando...'}
                                     onMenuClick={() => navigate('/passenger/menu')}
                                     onServiceSelect={(id) => {

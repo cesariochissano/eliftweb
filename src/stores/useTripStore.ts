@@ -293,7 +293,6 @@ export const useTripStore = create<TripState>()(
                             dest_lat: details.destLat,
                             dest_lng: details.destLng,
                             trip_version: 1,
-                            request_key: crypto.randomUUID(),
                             security_pin: (new Date().getHours() >= 22 || new Date().getHours() <= 5)
                                 ? Math.floor(1000 + Math.random() * 9000).toString()
                                 : null

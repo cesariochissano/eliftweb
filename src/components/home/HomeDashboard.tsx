@@ -25,83 +25,96 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
     onRequestClick
 }) => {
     return (
-        <div className="w-full h-full flex flex-col bg-white relative overflow-hidden">
-            <div className="flex-1 flex flex-col overflow-y-auto pb-24 no-scrollbar">
-                {/* 1. Header & Greeting */}
-                <header className="px-6 flex items-center justify-between pt-safe mt-4 mb-2">
-                    <h1 className="text-3xl font-extrabold text-[#101b0d] tracking-tight">
-                        Olá, <span className="capitalize">{userName ? userName.split(' ')[0] : 'Newton'}</span>
-                    </h1>
-                    <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-sm" onClick={onMenuClick}>
-                        {userAvatar ? (
-                            <img src={userAvatar} alt="Profile" className="w-full h-full object-cover" />
-                        ) : (
-                            <img src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=100&h=100&fit=crop" alt="Profile" className="w-full h-full object-cover" />
-                        )}
-                    </div>
-                </header>
+        <div className="w-full h-screen flex flex-col bg-white overflow-hidden">
+            {/* Scrollable Content Zone */}
+            <div className="flex-1 flex flex-col overflow-y-auto no-scrollbar pb-safe w-full">
+                <div className="w-full max-w-[1200px] mx-auto flex flex-col">
+                    {/* 1. Header & Greeting */}
+                    <header className="px-6 flex items-center justify-between mt-[max(1rem,env(safe-area-inset-top))] mb-2 h-[clamp(56px,8vh,72px)] shrink-0">
+                        <h1 className="text-[clamp(1.5rem,4vw,1.75rem)] font-extrabold text-[#101b0d] tracking-tight">
+                            Olá, <span className="capitalize">{userName ? userName.split(' ')[0] : 'Newton'}</span>
+                        </h1>
+                        <div
+                            className="w-[clamp(36px,6vw,48px)] h-[clamp(36px,6vw,48px)] rounded-full overflow-hidden border-2 border-white shadow-sm shrink-0"
+                            onClick={onMenuClick}
+                        >
+                            {userAvatar ? (
+                                <img src={userAvatar || undefined} alt="Profile" className="w-full h-full object-cover" />
+                            ) : (
+                                <img src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=100&h=100&fit=crop" alt="Profile" className="w-full h-full object-cover" />
+                            )}
+                        </div>
+                    </header>
 
-                {/* 2. Map Banner / "Para onde vamos?" */}
-                <div className="px-6 mb-6">
-                    <button
-                        onClick={onRequestClick}
-                        className="w-full aspect-[2/1] bg-gray-100 rounded-[1.8rem] relative overflow-hidden flex flex-col items-start justify-center p-6 shadow-sm group active:scale-[0.98] transition-all"
-                    >
-                        {/* Map Background */}
-                        <div className="absolute inset-0 bg-[url('https://cartodb-basemaps-a.global.ssl.fastly.net/light_all/14/9764/9876.png')] bg-cover bg-center grayscale opacity-60 mix-blend-multiply" />
+                    {/* 2. Dominant Banner (Visual Entry Point) */}
+                    <div className="px-6 mb-4 mt-2 shrink-0">
+                        <button
+                            onClick={onRequestClick}
+                            className="w-full h-[clamp(180px,32vh,300px)] bg-[#101b0d] rounded-[2.5rem] relative overflow-hidden flex flex-col items-start justify-end p-8 shadow-2xl shadow-green-900/20 group active:scale-[0.98] transition-all"
+                        >
+                            {/* Background Gradients */}
+                            <div className="absolute inset-0 bg-gradient-to-br from-[#101b0d] via-[#0a1208] to-[#000000]" />
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-[#10D772] rounded-full blur-[100px] opacity-20 group-hover:opacity-30 transition-opacity" />
 
-                        {/* 3D Map Pin Decor */}
-                        <div className="absolute right-12 top-1/2 -translate-y-1/2">
-                            <div className="relative">
-                                <div className="w-4 h-4 bg-green-500 rounded-full animate-ping absolute top-0 left-1/2 -translate-x-1/2 opacity-20" />
-                                <MapPin size={48} className="text-[#10D772] fill-current drop-shadow-xl" />
-                                <div className="w-12 h-12 bg-green-500/20 blur-xl rounded-full absolute top-8 left-0" />
+                            {/* Abstract Map Lines Decor */}
+                            <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/city-fields.png')] mix-blend-overlay" />
+
+                            {/* Content */}
+                            <div className="relative z-10 w-full max-w-[70%]">
+                                <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full mb-4 border border-white/10">
+                                    <div className="w-2 h-2 rounded-full bg-[#10D772] animate-pulse" />
+                                    <span className="text-white/90 text-xs font-bold tracking-wide truncate max-w-[20ch]">
+                                        {currentAddress ? currentAddress.split(',')[0] : 'Para onde vamos?'}
+                                    </span>
+                                </div>
+
+                                <h2 className="text-[clamp(1.5rem,4vw,2.25rem)] font-extrabold text-white leading-tight mb-1 text-left">
+                                    Encontre o seu <br />
+                                    <span className="text-[#10D772]">melhor trajeto.</span>
+                                </h2>
                             </div>
-                        </div>
 
-                        <div className="relative z-10 bg-white/80 backdrop-blur-md px-4 py-3 rounded-2xl shadow-sm border border-white/50">
-                            <h2 className="text-lg font-bold text-[#101b0d]">Para onde vamos?</h2>
-                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mt-0.5 max-w-[150px] truncate">
-                                {currentAddress || 'Localizando...'}
-                            </p>
-                        </div>
-                    </button>
+                            {/* Floating Action Button (Relative to Banner) */}
+                            <div className="absolute bottom-8 right-8 w-[clamp(32px,6vw,48px)] h-[clamp(32px,6vw,48px)] bg-white rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                                <MapPin size={24} className="text-[#101b0d] fill-current w-[50%] h-[50%]" />
+                            </div>
+                        </button>
+                    </div>
+
+                    {/* 3. Service Grid (3 Cols) */}
+                    <div className="px-6 mb-4 shrink-0">
+                        <ServiceGrid onSelectService={onServiceSelect} />
+                    </div>
+
+                    {/* 4. Recent Activity List */}
+                    <div className="px-6 shrink-0">
+                        <RecentActivityList />
+                    </div>
                 </div>
-
-                {/* 3. Service Grid (3 Cols) */}
-                <div className="px-6 mb-4">
-                    <ServiceGrid onSelectService={onServiceSelect} />
-                </div>
-
-                {/* 4. Recent Activity List */}
-                <div className="px-6">
-                    <RecentActivityList />
-                </div>
-
-                {/* Spacer for Fixed Footer */}
-                <div className="h-4" />
             </div>
 
-            {/* 5. Fixed Footer Actions (Floating Island) */}
-            <div className="absolute bottom-4 left-4 right-4 bg-white/95 backdrop-blur-md border border-white/50 p-4 flex gap-3 z-[1000] shadow-[0_8px_30px_rgba(0,0,0,0.12)] rounded-[2rem]">
-                <Button
-                    variant="outline"
-                    className="flex-1 h-14 rounded-[1.5rem] border-2 border-[#101b0d] hover:bg-[#101b0d] hover:text-white font-bold text-sm text-[#101b0d] transition-all"
-                    onClick={onScheduleClick}
-                >
-                    <CalendarClock size={20} className="mr-2" />
-                    Agendar Lift
-                </Button>
-                <Button
-                    className="flex-[1.5] h-14 rounded-[1.5rem] bg-[#101b0d] hover:bg-black/90 text-white font-extrabold text-sm shadow-xl shadow-green-900/10"
-                    onClick={() => {
-                        onServiceSelect('drive'); // Default to drive
-                        onRequestClick();
-                    }}
-                >
-                    <div className="w-2 h-2 rounded-full bg-[#10d772] mr-2 animate-pulse" />
-                    Pedir Lift Agora
-                </Button>
+            {/* 5. Fixed Flex Footer (Stable Action Zone) */}
+            <div className="flex-shrink-0 bg-white border-t border-gray-50 pb-[env(safe-area-inset-bottom)] z-50">
+                <div className="w-full max-w-[1200px] mx-auto px-6 py-4 flex gap-3">
+                    <Button
+                        variant="outline"
+                        className="flex-1 h-[56px] rounded-[1.5rem] border-2 border-[#101b0d] hover:bg-[#101b0d] hover:text-white font-bold text-sm text-[#101b0d] transition-all"
+                        onClick={onScheduleClick}
+                    >
+                        <CalendarClock size={20} className="mr-2" />
+                        Agendar
+                    </Button>
+                    <Button
+                        className="flex-[1.5] h-[56px] rounded-[1.5rem] bg-[#101b0d] hover:bg-black/90 text-white font-extrabold text-sm shadow-xl shadow-green-900/10"
+                        onClick={() => {
+                            onServiceSelect('drive'); // Default to drive
+                            onRequestClick();
+                        }}
+                    >
+                        <div className="w-2 h-2 rounded-full bg-[#10d772] mr-2 animate-pulse" />
+                        Pedir Agora
+                    </Button>
+                </div>
             </div>
         </div>
     );
