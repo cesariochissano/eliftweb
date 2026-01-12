@@ -756,13 +756,14 @@ export default function HomePassenger() {
                                     userAvatar={displayAvatar}
                                     currentAddress={pickup?.address || 'Localizando...'}
                                     onMenuClick={() => navigate('/passenger/menu')}
+                                    selectedService={selectedService} // Pass state
                                     onServiceSelect={(id) => {
                                         setSelectedService(id);
-                                        setSheetState('SEARCHING');
+                                        // Removed automatic navigation to support Dynamic CTA
                                     }}
                                     onScheduleClick={() => alert("Funcionalidade de Agendamento em breve!")}
                                     onRequestClick={() => {
-                                        setSelectedService('drive');
+                                        // Use current selectedService (default 'drive') and navigate
                                         setSheetState('SEARCHING');
                                     }}
                                 />

@@ -3,6 +3,7 @@ import { MapPin, CalendarClock } from 'lucide-react';
 import { Button } from '../ui/button';
 import { ServiceGrid } from './ServiceGrid';
 import { RecentActivityList } from './RecentActivityList';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface HomeDashboardProps {
     userName: string;
@@ -12,110 +13,180 @@ interface HomeDashboardProps {
     onMenuClick: () => void;
     onServiceSelect: (id: string) => void;
     onScheduleClick: () => void;
-    onRequestClick: () => void; // Redundant primary action usually maps to 'drive' or generic search
+    onRequestClick: () => void;
+    selectedService?: string; // New Prop for Dynamic CTA
 }
+
+const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.1,
+            delayChildren: 0.1
+        }
+    }
+};
+
+const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0 }
+};
 
 export const HomeDashboard: React.FC<HomeDashboardProps> = ({
     userName,
     userAvatar,
     currentAddress,
+    greeting,
     onMenuClick,
     onServiceSelect,
     onScheduleClick,
-    onRequestClick
+    onRequestClick,
+    selectedService = 'drive' // Default to drive
 }) => {
+
+    // Dynamic CTA Text Helper
+    const getCtaText = (service: string) => {
+        const map: Record<string, string> = {
+            'drive': 'Pedir Carro',
+            'bike': 'Pedir Bike',
+            'txopela': 'Pedir Txopela',
+            'carga': 'Pedir Carga'
+        };
+        return map[service] || 'Pedir Agora';
+    };
+
     return (
-        <div className="w-full h-screen flex flex-col bg-white overflow-hidden">
-            {/* Scrollable Content Zone */}
+        <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="show"
+            className="h-screen flex flex-col bg-gray-50 relative overflow-hidden"
+        >
+            {/* Scrollable Content */}
             <div className="flex-1 flex flex-col overflow-y-auto no-scrollbar pb-safe w-full">
                 <div className="w-full max-w-[1200px] mx-auto flex flex-col">
-                    {/* 1. Header & Greeting */}
-                    <header className="px-6 flex items-center justify-between mt-[max(1rem,env(safe-area-inset-top))] mb-2 h-[clamp(56px,8vh,72px)] shrink-0">
-                        <h1 className="text-[clamp(1.5rem,4vw,1.75rem)] font-extrabold text-[#101b0d] tracking-tight">
-                            Olá, <span className="capitalize">{userName ? userName.split(' ')[0] : 'Newton'}</span>
-                        </h1>
-                        <div
-                            className="w-[clamp(36px,6vw,48px)] h-[clamp(36px,6vw,48px)] rounded-full overflow-hidden border-2 border-white shadow-sm shrink-0"
+
+                    {/* Header Item */}
+                    <motion.div variants={itemVariants} className="px-6 flex items-center justify-between mt-[max(1rem,env(safe-area-inset-top))] h-[clamp(56px,8vh,72px)] shrink-0 z-20">
+                        <div className="flex flex-col">
+                            <span className="text-sm text-gray-500 font-medium">{greeting},</span>
+                            <h1 className="font-bold text-[#101b0d] text-[clamp(1.5rem,4vw,1.75rem)] leading-tight">
+                                {userName}
+                            </h1>
+                        </div>
+                        <button
                             onClick={onMenuClick}
+                            className="relative w-[clamp(36px,6vw,48px)] h-[clamp(36px,6vw,48px)] rounded-full overflow-hidden border-2 border-white shadow-sm active:scale-95 transition-transform"
                         >
                             {userAvatar ? (
-                                <img src={userAvatar || undefined} alt="Profile" className="w-full h-full object-cover" />
+                                <img src={userAvatar} alt="Profile" className="w-full h-full object-cover" />
                             ) : (
-                                <img src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=100&h=100&fit=crop" alt="Profile" className="w-full h-full object-cover" />
+                                <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                                    <span className="text-gray-400 text-xs">IMG</span>
+                                </div>
                             )}
-                        </div>
-                    </header>
+                        </button>
+                    </motion.div>
 
-                    {/* 2. Dominant Banner (Visual Entry Point) */}
-                    <div className="px-6 mb-4 mt-2 shrink-0">
+                    {/* Dominant Banner Item */}
+                    <motion.div variants={itemVariants} className="px-6 mb-8 mt-2">
                         <button
                             onClick={onRequestClick}
                             className="w-full h-[clamp(180px,32vh,300px)] bg-[#101b0d] rounded-[2.5rem] relative overflow-hidden flex flex-col items-start justify-end p-8 shadow-2xl shadow-green-900/20 group active:scale-[0.98] transition-all"
                         >
-                            {/* Background Gradients */}
+                            {/* Background Gradients & Breathing Effect */}
                             <div className="absolute inset-0 bg-gradient-to-br from-[#101b0d] via-[#0a1208] to-[#000000]" />
-                            <div className="absolute top-0 right-0 w-64 h-64 bg-[#10D772] rounded-full blur-[100px] opacity-20 group-hover:opacity-30 transition-opacity" />
+                            <motion.div
+                                animate={{ opacity: [0.2, 0.3, 0.2] }}
+                                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                                className="absolute top-0 right-0 w-64 h-64 bg-[#10D772] rounded-full blur-[100px]"
+                            />
+
+                            {/* Glimmer Effect (Diagonal Shine) */}
+                            <motion.div
+                                initial={{ x: '-150%', opacity: 0 }}
+                                animate={{ x: '150%', opacity: [0, 0.3, 0] }}
+                                transition={{ duration: 2, repeat: Infinity, repeatDelay: 5, ease: "easeInOut" }}
+                                className="absolute top-0 bottom-0 w-32 bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-[-30deg]"
+                            />
 
                             {/* Abstract Map Lines Decor */}
                             <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/city-fields.png')] mix-blend-overlay" />
 
                             {/* Content */}
-                            <div className="relative z-10 w-full max-w-[70%]">
-                                <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full mb-4 border border-white/10">
-                                    <div className="w-2 h-2 rounded-full bg-[#10D772] animate-pulse" />
-                                    <span className="text-white/90 text-xs font-bold tracking-wide truncate max-w-[20ch]">
-                                        {currentAddress ? currentAddress.split(',')[0] : 'Para onde vamos?'}
+                            <div className="relative z-10 w-full text-left">
+                                <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full mb-4 border border-white/5">
+                                    <div className="w-2 h-2 bg-[#10d772] rounded-full animate-pulse" />
+                                    <span className="text-xs font-medium text-white/90 truncate max-w-[200px]">
+                                        {currentAddress.split(',')[0]}
                                     </span>
                                 </div>
 
-                                <h2 className="text-[clamp(1.5rem,4vw,2.25rem)] font-extrabold text-white leading-tight mb-1 text-left">
-                                    Encontre o seu <br />
-                                    <span className="text-[#10D772]">melhor trajeto.</span>
-                                </h2>
-                            </div>
+                                <div className="flex items-end justify-between w-full">
+                                    <h2 className="text-white text-[clamp(1.75rem,5vw,2.5rem)] font-bold leading-[1.1] max-w-[70%]">
+                                        Encontre o seu <br />
+                                        <span className="text-[#10d772]">melhor trajeto.</span>
+                                    </h2>
 
-                            {/* Floating Action Button (Relative to Banner) */}
-                            <div className="absolute bottom-8 right-8 w-[clamp(32px,6vw,48px)] h-[clamp(32px,6vw,48px)] bg-white rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                                <MapPin size={24} className="text-[#101b0d] fill-current w-[50%] h-[50%]" />
+                                    <div className="w-[clamp(48px,12vw,64px)] h-[clamp(48px,12vw,64px)] bg-white rounded-full flex items-center justify-center shadow-lg shadow-white/10">
+                                        <MapPin className="text-[#101b0d] w-[50%] h-[50%] fill-current" />
+                                    </div>
+                                </div>
                             </div>
                         </button>
-                    </div>
+                    </motion.div>
 
-                    {/* 3. Service Grid (3 Cols) */}
-                    <div className="px-6 mb-4 shrink-0">
-                        <ServiceGrid onSelectService={onServiceSelect} />
-                    </div>
+                    {/* Service Grid - Staggered Row 1 */}
+                    <motion.div variants={itemVariants} className="px-6 mb-8">
+                        <ServiceGrid onSelectService={onServiceSelect} selectedService={selectedService} />
+                    </motion.div>
 
-                    {/* 4. Recent Activity List */}
-                    <div className="px-6 shrink-0">
+                    {/* Recent Activity - Staggered Row 2 */}
+                    <motion.div variants={itemVariants} className="px-6 pb-24">
                         <RecentActivityList />
-                    </div>
+                    </motion.div>
                 </div>
             </div>
 
-            {/* 5. Fixed Flex Footer (Stable Action Zone) */}
-            <div className="flex-shrink-0 bg-white border-t border-gray-50 pb-[env(safe-area-inset-bottom)] z-50">
-                <div className="w-full max-w-[1200px] mx-auto px-6 py-4 flex gap-3">
+            {/* Action Zone (Fixed Footer) */}
+            <motion.div
+                initial={{ y: 50, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.4 }}
+                className="w-full bg-white border-t border-gray-100 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-5px_20px_rgba(0,0,0,0.03)] flex-shrink-0 z-30"
+            >
+                <div className="max-w-[1200px] mx-auto flex items-center gap-4">
                     <Button
                         variant="outline"
-                        className="flex-1 h-[56px] rounded-[1.5rem] border-2 border-[#101b0d] hover:bg-[#101b0d] hover:text-white font-bold text-sm text-[#101b0d] transition-all"
+                        size="lg"
                         onClick={onScheduleClick}
+                        className="flex-1 h-[56px] rounded-2xl border-gray-200 text-gray-600 font-bold text-base hover:bg-gray-50 active:scale-95 transition-all"
                     >
-                        <CalendarClock size={20} className="mr-2" />
+                        <CalendarClock className="mr-2 h-5 w-5" />
                         Agendar
                     </Button>
                     <Button
-                        className="flex-[1.5] h-[56px] rounded-[1.5rem] bg-[#101b0d] hover:bg-black/90 text-white font-extrabold text-sm shadow-xl shadow-green-900/10"
-                        onClick={() => {
-                            onServiceSelect('drive'); // Default to drive
-                            onRequestClick();
-                        }}
+                        size="lg"
+                        onClick={onRequestClick}
+                        className="flex-[2] h-[56px] rounded-2xl bg-[#101b0d] hover:bg-[#1a2c16] text-white font-bold text-lg shadow-lg shadow-green-900/10 active:scale-95 transition-all"
                     >
-                        <div className="w-2 h-2 rounded-full bg-[#10d772] mr-2 animate-pulse" />
-                        Pedir Agora
+                        <div className="w-2 h-2 bg-[#10d772] rounded-full mr-3 animate-pulse" />
+
+                        <AnimatePresence mode='wait'>
+                            <motion.span
+                                key={selectedService}
+                                initial={{ y: 10, opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                exit={{ y: -10, opacity: 0 }}
+                                transition={{ duration: 0.2 }}
+                            >
+                                {getCtaText(selectedService)}
+                            </motion.span>
+                        </AnimatePresence>
                     </Button>
                 </div>
-            </div>
-        </div>
+            </motion.div>
+        </motion.div>
     );
 };

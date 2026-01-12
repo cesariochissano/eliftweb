@@ -9,9 +9,10 @@ interface NewServiceCardProps {
     onClick: () => void;
     selected: boolean;
     className?: string;
+    badgeText?: string;
 }
 
-export const NewServiceCard: React.FC<NewServiceCardProps> = ({ title, icon: Icon, imageSrc, onClick, selected, className }) => {
+export const NewServiceCard: React.FC<NewServiceCardProps> = ({ title, icon: Icon, imageSrc, onClick, selected, className, badgeText }) => {
     return (
         <motion.button
             whileTap={{ scale: 0.98 }}
@@ -20,10 +21,19 @@ export const NewServiceCard: React.FC<NewServiceCardProps> = ({ title, icon: Ico
                 rounded-[1.5rem] p-4 flex flex-col items-center justify-center gap-2 relative overflow-hidden transition-all shadow-sm
                 ${selected
                     ? 'bg-white ring-2 ring-[#10d772] shadow-[0_4px_20px_rgba(16,215,114,0.15)]'
-                    : 'bg-white border border-gray-100 hover:border-[#10d772]/30'} 
+                    : 'bg-white border border-gray-100 hover:border-[#10d772]/30'}
                 ${className || 'w-full h-[120px]'}
             `}
         >
+            {/* Optional Badge */}
+            {badgeText && (
+                <div className="absolute top-0 left-0 bg-[#10d772] px-3 py-1 rounded-br-2xl z-20">
+                    <span className="text-[10px] font-extrabold text-white tracking-wider uppercase">
+                        {badgeText}
+                    </span>
+                </div>
+            )}
+
             {/* Image or Icon - STRICT 70% Height Limit */}
             <div className="flex-1 flex items-center justify-center w-full relative z-10 h-full overflow-hidden">
                 {imageSrc ? (
