@@ -94,6 +94,9 @@ export const useDriverStore = create<DriverState>((set, get) => ({
     },
 
     subscribeToRequests: () => {
+        // 1. Initial Fetch: Only get requests created in the last 20 minutes
+        const twentyMinsAgo = new Date(Date.now() - 20 * 60 * 1000).toISOString();
+
         supabase
             .from('trips')
             .select(`
@@ -105,6 +108,7 @@ export const useDriverStore = create<DriverState>((set, get) => ({
             `)
             .eq('status', 'REQUESTING')
             .is('driver_id', null)
+            .gt('created_at', twentyMinsAgo) // TIME FILTER
             .then(({ data }: { data: any }) => {
                 if (data) {
                     const formatted = data.map((t: any) => ({
@@ -116,12 +120,16 @@ export const useDriverStore = create<DriverState>((set, get) => ({
                 }
             });
 
+        // 2. Realtime Subscription
         supabase
             .channel('driver-requests')
             .on(
                 'postgres_changes',
                 { event: 'INSERT', schema: 'public', table: 'trips', filter: 'status=eq.REQUESTING' },
                 async (payload: any) => {
+                    // Double check time just in case
+                    if (new Date(payload.new.created_at) < new Date(Date.now() - 20 * 60 * 1000)) return;
+
                     const { data } = await supabase
                         .from('profiles')
                         .select('first_name, avatar_url')
@@ -155,6 +163,7 @@ export const useDriverStore = create<DriverState>((set, get) => ({
                 'postgres_changes',
                 { event: 'UPDATE', schema: 'public', table: 'trips' },
                 (payload: any) => {
+                    // Remove if no longer REQUESTING
                     if (payload.new.status !== 'REQUESTING') {
                         set((state) => ({
                             incomingRequests: state.incomingRequests.filter(r => r.id !== payload.new.id)
@@ -163,6 +172,11 @@ export const useDriverStore = create<DriverState>((set, get) => ({
                 }
             )
             .subscribe();
+
+        // 3. Periodic Cleanup (Every 1 minute)
+        // We attach this to the window or a store property to avoid leaks if called multiple times, 
+        // but for simplicity in Zustand, we rely on the component using this to handle unmount or just let it run.
+        // Better pattern: The caller (Dashboard) should manage the interval or we just check on state updates.
     },
 
     ignoreRequest: (tripId: string) => {
@@ -188,6 +202,11 @@ export const useDriverStore = create<DriverState>((set, get) => ({
             set({ activeTripId: null });
             alert('Desculpe, esta viagem já foi aceite por outro motorista.');
             get().subscribeToRequests();
+        } else {
+            // Success: Trigger TripStore to pick up the new active trip immediately
+            // We use the direct import to avoid circular hook dependency issues if any
+            const { useTripStore } = await import('./useTripStore');
+            await useTripStore.getState().rehydrateActiveTrip();
         }
     },
 

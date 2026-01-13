@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useTripStore } from '../../stores/useTripStore';
 import { useDriverStore } from '../../stores/useDriverStore';
 import { Button } from '../../components/ui/button';
-import { MapPin, Navigation, DollarSign, User, Clock, Power, LogOut, MessageSquare, TrendingUp, ChevronRight, Calendar, Bot, Bell, AlertTriangle, Shield, Zap, Share2 } from 'lucide-react';
+import { MapPin, Navigation, DollarSign, User, Clock, Power, LogOut, MessageSquare, TrendingUp, ChevronRight, Calendar, Bot, Bell, AlertTriangle, Shield, Home, BarChart2, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useGeolocation } from '../../hooks/useGeolocation';
 import { supabase } from '../../lib/supabase';
@@ -10,13 +10,12 @@ import { ChatDrawer } from '../../components/ui/chat-drawer';
 import { AIAssistantDrawer } from '../../components/ui/ai-assistant-drawer';
 import GamificationWidget from './components/GamificationWidget';
 import Map from '../../components/map/Map';
-
 import { EliftIntelligence } from '../../lib/elift-intelligence';
 import { Input } from '../../components/ui/input';
 
 export default function DriverDashboard() {
     // Legacy store for Active Trip management (Start/Complete)
-    const { status, tripDetails, startTrip, completeTrip, resetTrip, cancelTrip, setUserRole, logout, isSyncing, isActionLoading, isSimulatingArrival, setSimulatingArrival, userId, messages, isWaitingActive, setAtStop, stopArrivalTime } = useTripStore();
+    const { status, tripDetails, startTrip, completeTrip, resetTrip, setUserRole, logout, isSyncing, isActionLoading, isSimulatingArrival, setSimulatingArrival, userId, messages, isWaitingActive, stopArrivalTime } = useTripStore();
 
     // New Store for Driver State & Requests
     const { isOnline, incomingRequests, toggleOnline, acceptTrip, ignoreRequest, walletBalance, fetchBalance, fleetType, fetchFleetInfo } = useDriverStore();
@@ -30,6 +29,9 @@ export default function DriverDashboard() {
     const [recentTrips, setRecentTrips] = useState<any[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const prevMessagesLen = useRef(0);
+
+    // Navigation State
+    const [activeTab, setActiveTab] = useState<'home' | 'earnings' | 'profile'>('home');
 
     // Bloco 7.4: PIN State
     const [pinInput, setPinInput] = useState('');
@@ -82,6 +84,13 @@ export default function DriverDashboard() {
             return () => clearTimeout(timer);
         }
     }, [status, setSimulatingArrival]);
+
+    // Force Home Tab on Active Trip
+    useEffect(() => {
+        if (status !== 'IDLE') {
+            setActiveTab('home');
+        }
+    }, [status]);
 
     // Update Driver Location in DB
     useEffect(() => {
@@ -178,30 +187,13 @@ export default function DriverDashboard() {
         window.open(`https://www.google.com/maps/dir/?api=1&destination=${encoded}`, '_blank');
     };
 
-    // OFFLINE VIEW
-    if (!isOnline) {
-        return (
-            <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-6 text-white text-center">
-                <div className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center mb-6">
-                    <Power size={32} className="text-gray-400" />
-                </div>
-                <h1 className="text-2xl font-bold mb-2">Você está Offline</h1>
-                <p className="text-gray-400 mb-8 max-w-xs">Fique online para começar a receber solicitações de viagem nas proximidades.</p>
-                <Button
-                    size="lg"
-                    className="w-full bg-primary text-black hover:bg-primary-dark font-bold"
-                    onClick={() => handleToggleOnline(true)}
-                >
-                    FICAR ONLINE
-                </Button>
-            </div>
-        );
-    }
+    // OFFLINE LAYOUT INTEGRATION
+    // Instead of returning early, we now render the main layout but with specific visual cues for Offline state.
 
     const isBlocked = walletBalance < -1500;
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col">
+        <div className="min-h-screen bg-gray-50 flex flex-col relative overflow-hidden">
             {/* Syncing Indicator */}
             {isSyncing && (
                 <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-black/90 backdrop-blur-md text-white px-5 py-2.5 rounded-full z-[5000] flex items-center gap-3 shadow-2xl border border-primary/20 animate-in fade-in zoom-in duration-300">
@@ -210,7 +202,7 @@ export default function DriverDashboard() {
                 </div>
             )}
 
-            {/* Header */}
+            {/* Header (Depends on Tab) */}
             <header className="fixed top-0 left-0 right-0 bg-white z-20 px-6 py-4 pt-safe flex items-center justify-between shadow-sm transition-all duration-300">
                 {isBlocked && (
                     <div className="absolute top-[100%] left-0 right-0 bg-red-600 text-white p-2 text-xs font-bold text-center animate-in slide-in-from-top flex items-center justify-center gap-4 shadow-md">
@@ -222,7 +214,7 @@ export default function DriverDashboard() {
                             size="sm"
                             variant="outline"
                             className="h-7 border-white text-white hover:bg-white hover:text-red-600 px-3 bg-red-500/50"
-                            onClick={() => navigate('/driver/earnings')}
+                            onClick={() => setActiveTab('earnings')}
                         >
                             Regularizar
                         </Button>
@@ -230,38 +222,28 @@ export default function DriverDashboard() {
                 )}
 
                 <div className="flex items-center gap-3">
-                    <Button
-                        size="icon"
-                        variant="ghost"
-                        className="rounded-full text-red-500 hover:bg-red-50"
-                        onClick={() => logout()}
-                    >
-                        <LogOut size={20} />
-                    </Button>
-                    <div className="w-10 h-10 bg-black rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors" onClick={() => navigate('/driver/profile')}>
+                    <div className="w-10 h-10 bg-black rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors" onClick={() => setActiveTab('profile')}>
                         <User size={20} className="text-white" />
                     </div>
                     <div>
-                        <h2 className="font-bold text-sm">Motorista</h2>
-                        <div className="flex items-center gap-1 text-xs text-green-600 font-bold">
-                            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                            ONLINE
-                        </div>
+                        <h2 className="font-bold text-sm">
+                            {activeTab === 'home' ? 'Motorista' : activeTab === 'earnings' ? 'Ganhos & Finanças' : 'Perfil'}
+                        </h2>
+                        {activeTab === 'home' && (
+                            <div className={`flex items-center gap-1 text-xs font-bold ${isOnline ? 'text-green-600' : 'text-gray-400'}`}>
+                                <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`} />
+                                {isOnline ? 'ONLINE' : 'OFFLINE'}
+                            </div>
+                        )}
                     </div>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => handleToggleOnline(false)}>
-                    <Power size={20} className="text-red-500" />
-                </Button>
-            </header>
 
-            <div className="fixed top-20 right-4 z-[900]">
-                <Button
-                    className="w-12 h-12 rounded-full bg-black text-primary shadow-xl border-2 border-primary/20 flex items-center justify-center p-0"
-                    onClick={() => setIsAiOpen(true)}
-                >
-                    <Bot size={24} />
-                </Button>
-            </div>
+                {activeTab === 'home' && isOnline && (
+                    <Button variant="ghost" size="sm" onClick={() => handleToggleOnline(false)}>
+                        <Power size={20} className="text-red-500" />
+                    </Button>
+                )}
+            </header>
 
             <ChatDrawer
                 isOpen={isChatOpen}
@@ -281,124 +263,62 @@ export default function DriverDashboard() {
                 }}
             />
 
-            {/* Map - Background when on trip */}
-            {(status === 'ACCEPTED' || status === 'ARRIVED' || status === 'IN_PROGRESS') && (
-                <div className="absolute inset-0 z-0">
-                    <Map
-                        driverLocation={latitude && longitude ? { lat: latitude, lng: longitude } : undefined}
-                        pickupLocation={tripDetails ? { lat: tripDetails.originLat!, lng: tripDetails.originLng! } : null}
-                        destinationLocation={tripDetails ? { lat: tripDetails.destLat!, lng: tripDetails.destLng! } : null}
-                        onMapClick={(lat, lng) => console.log('Map clicked:', lat, lng)}
-                        tripStatus={status}
-                        isSimulatingArrival={isSimulatingArrival}
-                    />
-                </div>
-            )}
+            {/* --- MAP (BACKGROUND) --- */}
+            <div className={`absolute inset-0 z-0 transition-opacity duration-500 ${activeTab !== 'home' ? 'opacity-0 pointer-events-none' : 'opacity-100'} ${!isOnline ? 'grayscale opacity-50' : ''}`}>
+                <Map
+                    driverLocation={latitude && longitude ? { lat: latitude, lng: longitude } : undefined}
+                    pickupLocation={tripDetails ? { lat: tripDetails.originLat!, lng: tripDetails.originLng! } : null}
+                    destinationLocation={tripDetails ? { lat: tripDetails.destLat!, lng: tripDetails.destLng! } : null}
+                    onMapClick={(lat, lng) => console.log('Map clicked:', lat, lng)}
+                    tripStatus={status}
+                    isSimulatingArrival={isSimulatingArrival}
+                />
+            </div>
 
-            <main className={`flex-1 p-4 flex flex-col gap-4 relative z-10 ${status !== 'IDLE' ? 'pt-64' : 'pt-24'}`}>
-                {/* --- REQUESTS FEED --- */}
-                {status === 'IDLE' && incomingRequests.length > 0 && (
-                    <div className="mb-4 space-y-3">
-                        <div className="flex items-center gap-2 mb-2 px-1">
-                            <Bell size={16} className="text-primary animate-bounce" />
-                            <h3 className="font-bold text-sm text-gray-700">Novos Pedidos ({incomingRequests.length})</h3>
-                        </div>
-                        {incomingRequests.map((req) => (
-                            <div key={req.id} className="bg-white rounded-2xl p-4 shadow-lg border border-primary/20 animate-in slide-in-from-bottom duration-300">
-                                <div className="flex justify-between items-center mb-4">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
-                                            {req.passenger.avatar_url ? (
-                                                <img src={req.passenger.avatar_url} alt="User" />
-                                            ) : (
-                                                <User size={20} className="text-gray-400" />
-                                            )}
-                                        </div>
-                                        <div>
-                                            <div className="font-bold text-sm">{req.passenger.first_name}</div>
-                                            <div className="text-xs text-gray-400">4.8 ⭐</div>
-                                        </div>
-                                    </div>
-                                    <div className="flex flex-col items-end gap-1">
-                                        <div className="text-xl font-black">{req.price} MT</div>
-                                        <div className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">{req.distance}</div>
-                                    </div>
-                                </div>
+            {/* --- MAIN CONTENT AREA --- */}
+            <main className="flex-1 flex flex-col relative z-10 pt-20 pb-20 overflow-hidden">
 
-                                <div className="flex flex-col gap-2 mb-4">
-                                    <div className="flex items-center gap-3">
-                                        <MapPin size={16} className="text-green-600" />
-                                        <span className="text-sm font-medium truncate">{req.origin_address}</span>
-                                    </div>
-                                    <div className="w-0.5 h-3 bg-gray-200 ml-2" />
-                                    <div className="flex items-center gap-3">
-                                        <MapPin size={16} className="text-red-500" />
-                                        <span className="text-sm font-medium truncate">{req.destination_address}</span>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-3">
-                                    <Button variant="outline" size="sm" className="font-bold border-gray-200" onClick={() => ignoreRequest(req.id)}>
-                                        Ignorar
-                                    </Button>
-                                    <Button size="sm" className="bg-primary text-black hover:bg-primary-dark font-bold" onClick={() => userId && acceptTrip(req.id, userId)}>
-                                        Aceitar
-                                    </Button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-
-                {/* --- IDLE STATE --- */}
-                {status === 'IDLE' && incomingRequests.length === 0 && (
-                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 text-center py-10">
-                        <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
-                            <Navigation size={32} className="text-blue-500" />
-                        </div>
-                        <h3 className="font-bold text-gray-900 mb-1">A procurar passageiros...</h3>
-                        <p className="text-xs text-gray-400">Mantenha o app aberto. Os pedidos aparecerão aqui.</p>
-                    </div>
-                )}
-
-                {/* --- STATISTICS --- */}
-                {status === 'IDLE' && (
-                    <>
+                {/* TAB: EARNINGS */}
+                {activeTab === 'earnings' && (
+                    <div className="flex-1 overflow-y-auto px-4 pb- safe space-y-4 animate-in fade-in slide-in-from-bottom-4 bg-gray-50 h-full">
                         {fleetType !== 'CORPORATE' ? (
-                            <div className="bg-black text-white rounded-2xl p-5 shadow-lg cursor-pointer hover:scale-105 transition-transform" onClick={() => navigate('/driver/earnings')}>
-                                <div className="flex justify-between items-start mb-2">
-                                    <span className="text-gray-400 text-xs font-medium uppercase tracking-wider">Ganhos Hoje</span>
-                                    <TrendingUp size={16} className="text-primary" />
+                            <div className="bg-black text-white rounded-2xl p-6 shadow-lg">
+                                <div className="flex justify-between items-start mb-4">
+                                    <span className="text-gray-400 text-sm font-medium uppercase tracking-wider">Carteira Digital</span>
+                                    <DollarSign size={20} className="text-primary" />
                                 </div>
-                                <div className="text-3xl font-bold mb-1">{stats.todayEarnings.toLocaleString()} MZN</div>
-                                <div className="text-xs text-gray-400">{stats.todayTrips} viagens concluídas</div>
+                                <div className="text-4xl font-bold mb-2">{walletBalance.toFixed(2)} MZN</div>
+                                <div className="text-sm text-gray-400">Saldo disponível para levantamento</div>
                             </div>
                         ) : (
-                            <div className="bg-primary text-black rounded-2xl p-5 shadow-lg">
-                                <div className="flex justify-between items-start mb-2">
-                                    <span className="text-black/60 text-xs font-bold uppercase tracking-wider">Produção Hoje</span>
-                                    <TrendingUp size={16} className="text-black" />
+                            <div className="bg-primary text-black rounded-2xl p-6 shadow-lg">
+                                <div className="flex justify-between items-start mb-4">
+                                    <span className="text-black/60 text-sm font-bold uppercase tracking-wider">Produção Hoje</span>
+                                    <TrendingUp size={20} className="text-black" />
                                 </div>
-                                <div className="text-3xl font-black mb-1">{stats.todayTrips} Viagens</div>
-                                <div className="text-xs text-black/60 font-medium">Conta Corporativa • Salário Fixo</div>
+                                <div className="text-4xl font-black mb-2">{stats.todayTrips} Viagens</div>
+                                <div className="text-sm text-black/60 font-medium">Conta Corporativa • Salário Fixo</div>
                             </div>
                         )}
 
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                                <p className="text-gray-400 text-xs uppercase font-bold mb-1">Ganhos Hoje</p>
+                                <p className="text-2xl font-bold text-gray-900">{stats.todayEarnings.toLocaleString()} MT</p>
+                            </div>
+                            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                                <p className="text-gray-400 text-xs uppercase font-bold mb-1">Viagens Hoje</p>
+                                <p className="text-2xl font-bold text-gray-900">{stats.todayTrips}</p>
+                            </div>
+                        </div>
+
                         <GamificationWidget totalTrips={stats.todayTrips || 0} rating={4.9} />
 
-                        <div className="bg-white rounded-2xl p-5 shadow-soft border border-gray-100 flex-1 overflow-y-auto min-h-[200px]">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                                    <Calendar size={18} className="text-primary" />
-                                    Histórico Recente
-                                </h3>
-                                {fleetType !== 'CORPORATE' && (
-                                    <div className="text-right">
-                                        <div className="text-[10px] text-gray-400 font-bold uppercase">Carteira</div>
-                                        <div className="text-sm font-bold text-green-600">{walletBalance.toFixed(2)} MT</div>
-                                    </div>
-                                )}
-                            </div>
+                        <div className="bg-white rounded-2xl p-5 shadow-soft border border-gray-100">
+                            <h3 className="font-bold text-gray-900 flex items-center gap-2 mb-4">
+                                <Calendar size={18} className="text-primary" />
+                                Histórico Recente
+                            </h3>
                             <div className="space-y-4">
                                 {recentTrips.length === 0 ? (
                                     <div className="text-center py-8 text-gray-400 text-xs">Nenhuma viagem recente encontrada.</div>
@@ -410,255 +330,305 @@ export default function DriverDashboard() {
                                                     <span className="text-[10px] font-bold text-gray-400">
                                                         {new Date(trip.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                     </span>
-                                                    <span className="w-1 h-1 bg-gray-300 rounded-full" />
                                                     <span className="text-[10px] font-bold text-primary truncate">{trip.origin_address}</span>
                                                 </div>
                                                 <div className="text-xs font-bold text-gray-700 truncate">{trip.destination_address}</div>
                                             </div>
-                                            <div className="text-right flex items-center gap-2">
-                                                {fleetType !== 'CORPORATE' && (
-                                                    <div className="text-sm font-bold text-gray-900">{parseFloat(trip.price?.toString() || '0')} MT</div>
-                                                )}
-                                                <ChevronRight size={14} className="text-gray-300 group-hover:text-primary transition-colors" />
+                                            <div className="text-right font-bold text-sm">
+                                                {parseFloat(trip.price?.toString() || '0')} MT
                                             </div>
                                         </div>
                                     ))
                                 )}
                             </div>
                         </div>
-                    </>
+                    </div>
                 )}
 
-                {/* --- TRIP IN PROGRESS --- */}
-                {(status === 'ACCEPTED' || status === 'ARRIVED' || status === 'IN_PROGRESS') && tripDetails && (
-                    <div className="bg-white rounded-2xl p-5 shadow-soft border-2 border-primary/20 flex-1 flex flex-col animate-in zoom-in-95 duration-300">
-                        <div className="flex justify-between items-center mb-4 border-b border-gray-100 pb-4">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                                    <User size={20} />
-                                </div>
-                                <div>
-                                    <div className="font-bold">Passageiro</div>
-                                    <div className="text-xs text-gray-500">⭐ 4.9</div>
-                                </div>
+                {/* TAB: PROFILE */}
+                {activeTab === 'profile' && (
+                    <div className="flex-1 overflow-y-auto px-4 pb-safe space-y-4 animate-in fade-in slide-in-from-bottom-4 bg-gray-50 h-full">
+                        <div className="bg-white rounded-2xl p-6 shadow-sm flex flex-col items-center">
+                            <div className="w-24 h-24 bg-gray-200 rounded-full mb-4 overflow-hidden border-4 border-white shadow-lg">
+                                {/* Placeholder */}
+                                <User className="w-full h-full p-4 text-gray-400" />
                             </div>
-                            <div className="text-right">
-                                <div className="font-bold text-lg">
-                                    {((tripDetails.price || 0) + (tripDetails.waitingTimeCost || 0) + (tripDetails.routeAdjustmentCost || 0)).toLocaleString()} MZN
+                            <h2 className="text-xl font-bold">Motorista</h2>
+                            <p className="text-gray-500 text-sm">Toyota Ractis • ABH 123 MP</p>
+                            <div className="mt-4 flex gap-4">
+                                <div className="text-center px-4 py-2 bg-gray-50 rounded-xl">
+                                    <p className="font-black text-lg">4.9</p>
+                                    <p className="text-[10px] text-gray-400 uppercase">Avaliação</p>
                                 </div>
-                                <div className="text-[10px] font-bold text-primary uppercase">
-                                    {tripDetails.serviceId === 'drive' ? 'LiftDrive' :
-                                        tripDetails.serviceId === 'bike' ? 'LiftBike' :
-                                            tripDetails.serviceId === 'txopela' ? 'LiftTxopela' : 'LiftCarga'}
+                                <div className="text-center px-4 py-2 bg-gray-50 rounded-xl">
+                                    <p className="font-black text-lg">1.2k</p>
+                                    <p className="text-[10px] text-gray-400 uppercase">Viagens</p>
                                 </div>
-                                <div className="text-[10px] text-gray-400">Dinheiro</div>
                             </div>
                         </div>
 
-                        {/* Stops List (Bloco 7.4) */}
-                        {tripDetails.stops && tripDetails.stops.length > 0 && (
-                            <div className="mb-4 bg-gray-50 rounded-xl p-3 border border-gray-100">
-                                <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Paragens Adicionais</p>
-                                <div className="space-y-2">
-                                    {tripDetails.stops.map((stop, idx) => (
-                                        <div key={idx} className="flex items-center gap-2 text-xs font-medium text-gray-700">
-                                            <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full" />
-                                            <span className="truncate">{stop.address}</span>
+                        <div className="space-y-2">
+                            <button className="w-full bg-white p-4 rounded-xl shadow-sm text-left font-bold flex items-center justify-between hover:bg-gray-50">
+                                <span className="flex items-center gap-3"><Settings size={20} className="text-gray-400" /> Configurações</span>
+                                <ChevronRight size={16} className="text-gray-300" />
+                            </button>
+                            <button onClick={() => navigate('/driver/documents')} className="w-full bg-white p-4 rounded-xl shadow-sm text-left font-bold flex items-center justify-between hover:bg-gray-50">
+                                <span className="flex items-center gap-3"><Shield size={20} className="text-gray-400" /> Documentos</span>
+                                <ChevronRight size={16} className="text-gray-300" />
+                            </button>
+                            <button onClick={() => logout()} className="w-full bg-red-50 p-4 rounded-xl shadow-sm text-left font-bold flex items-center justify-between text-red-600 hover:bg-red-100">
+                                <span className="flex items-center gap-3"><LogOut size={20} className="text-red-500" /> Sair da Conta</span>
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+
+                {/* TAB: HOME (Requests & Status) */}
+                {activeTab === 'home' && (
+                    <div className="flex-1 flex flex-col px-4 pt-4 pointer-events-none">
+                        {/* Feed Container */}
+                        <div className="pointer-events-auto">
+
+                            {/* --- OFFLINE STATE (NEW) --- */}
+                            {!isOnline && (
+                                <div className="fixed bottom-24 left-4 right-4 animate-in slide-in-from-bottom duration-500 bg-white rounded-2xl p-6 shadow-xl border border-gray-100 text-center">
+                                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <Power size={28} className="text-gray-400" />
+                                    </div>
+                                    <h3 className="font-bold text-lg text-gray-900 mb-1">Você está Offline</h3>
+                                    <p className="text-sm text-gray-500 mb-6 max-w-xs mx-auto">Fique online para começar a receber solicitações de viagem nas proximidades.</p>
+                                    <Button
+                                        size="lg"
+                                        className="w-full bg-primary text-white hover:bg-green-600 font-bold h-14 shadow-lg shadow-green-500/20 active:scale-95 transition-all"
+                                        onClick={() => handleToggleOnline(true)}
+                                    >
+                                        FICAR ONLINE
+                                    </Button>
+                                </div>
+                            )}
+
+                            {/* --- REQUESTS FEED --- */}
+                            {isOnline && status === 'IDLE' && incomingRequests.length > 0 && (
+                                <div className="mb-4 space-y-3 pb-24 overflow-y-auto max-h-[70vh]">
+                                    <div className="flex items-center gap-2 mb-2 px-1 bg-white/80 backdrop-blur-sm self-start inline-flex rounded-full py-1 pr-3 shadow-sm border border-white/50">
+                                        <Bell size={16} className="text-primary animate-bounce ml-2" />
+                                        <h3 className="font-bold text-sm text-gray-900">Novos Pedidos ({incomingRequests.length})</h3>
+                                    </div>
+                                    {incomingRequests.map((req) => (
+                                        <div key={req.id} className="bg-white rounded-2xl p-4 shadow-xl border border-primary/20 animate-in slide-in-from-bottom duration-300">
+                                            <div className="flex justify-between items-center mb-4">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
+                                                        {req.passenger.avatar_url ? (
+                                                            <img src={req.passenger.avatar_url} alt="User" />
+                                                        ) : (
+                                                            <User size={20} className="text-gray-400" />
+                                                        )}
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-bold text-sm">{req.passenger.first_name}</div>
+                                                        <div className="text-xs text-gray-400">4.8 ⭐</div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-col items-end gap-1">
+                                                    <div className="text-xl font-black">{req.price} MT</div>
+                                                    <div className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">{req.distance}</div>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex flex-col gap-2 mb-4">
+                                                <div className="flex items-center gap-3">
+                                                    <MapPin size={16} className="text-green-600" />
+                                                    <span className="text-sm font-medium truncate">{req.origin_address}</span>
+                                                </div>
+                                                <div className="w-0.5 h-3 bg-gray-200 ml-2" />
+                                                <div className="flex items-center gap-3">
+                                                    <MapPin size={16} className="text-red-500" />
+                                                    <span className="text-sm font-medium truncate">{req.destination_address}</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <Button variant="outline" size="sm" className="font-bold border-gray-200" onClick={() => ignoreRequest(req.id)}>
+                                                    Ignorar
+                                                </Button>
+                                                <Button size="sm" className="bg-primary text-black hover:bg-primary-dark font-bold" onClick={() => userId && acceptTrip(req.id, userId)}>
+                                                    Aceitar
+                                                </Button>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
-                            </div>
-                        )}
-
-                        <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                                <Navigation size={18} className="text-blue-500" />
-                                <span className="font-bold text-lg">
-                                    {isSimulatingArrival ? 'Confirmando chegada...' :
-                                        status === 'ACCEPTED' ? 'A caminho do Passageiro' :
-                                            status === 'ARRIVED' ?
-                                                (isWaitingActive ? 'Aguardando (Taxiando)' : 'Aguardando Passageiro') :
-                                                (stopArrivalTime ? 'Paragem (Espera Ativa)' : 'A caminho do Destino')}
-                                </span>
-                                {(isWaitingActive || stopArrivalTime) && (
-                                    <span className="ml-auto bg-orange-100 text-orange-600 px-2 py-1 rounded text-[10px] font-black animate-pulse">
-                                        +{tripDetails.waitingTimeMin}min
-                                    </span>
-                                )}
-                            </div>
-                            <p className="text-gray-500 mb-6 pl-7">
-                                {status === 'ACCEPTED' || status === 'ARRIVED' ? tripDetails.origin : tripDetails.destination}
-                            </p>
-                        </div>
-
-                        <div className="mt-auto">
-                            <div className="grid grid-cols-2 gap-3 mb-3">
-                                <Button variant="outline" className="h-12 border-primary text-primary font-bold gap-2" onClick={handleNavigation}>
-                                    <Navigation size={18} /> Navegar
-                                </Button>
-                                <Button variant="outline" className="h-12 border-gray-200 font-bold gap-2 relative" onClick={() => setIsChatOpen(true)}>
-                                    <MessageSquare size={18} /> Chat
-                                    {unreadCount > 0 && (
-                                        <span className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full border-2 border-white">
-                                            {unreadCount}
-                                        </span>
-                                    )}
-                                </Button>
-                            </div>
-
-                            {/* SOS & Partilhar (Bloco 7.4) */}
-                            <div className="flex gap-2 mb-4">
-                                <Button
-                                    variant="outline"
-                                    className="flex-1 h-10 rounded-xl border-red-100 text-red-600 bg-red-50 font-bold text-xs"
-                                    onClick={() => {/* SOS Logic */ }}
-                                >
-                                    <Zap size={14} className="mr-2 fill-current" /> SOS
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    className="flex-1 h-10 rounded-xl border-blue-100 text-blue-600 bg-blue-50 font-bold text-xs"
-                                    onClick={() => {/* Share Logic */ }}
-                                >
-                                    <Share2 size={14} className="mr-2" /> Partilhar
-                                </Button>
-                            </div>
-
-                            {status === 'ACCEPTED' && !isSimulatingArrival && (
-                                <Button
-                                    size="lg"
-                                    className="w-full h-14 bg-black hover:bg-gray-900 text-white font-bold border-none shadow-lg"
-                                    onClick={() => {
-                                        if (tripDetails?.id && latitude && longitude) {
-                                            const speedKmh = (speed || 0) * 3.6;
-                                            const validation = EliftIntelligence.validateArrivedStatus(latitude, longitude, tripDetails.originLat!, tripDetails.originLng!, speedKmh);
-                                            if (!validation.valid) {
-                                                alert(validation.reason);
-                                                return;
-                                            }
-                                            useTripStore.getState().arriveAtPickup(tripDetails.id);
-                                            setSimulatingArrival(true);
-                                        }
-                                    }}
-                                    disabled={isActionLoading}
-                                >
-                                    {isActionLoading ? (
-                                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                    ) : (
-                                        <>
-                                            <MapPin className="mr-2" size={20} />
-                                            Cheguei ao Local
-                                        </>
-                                    )}
-                                </Button>
                             )}
 
-                            {status === 'ARRIVED' && !isSimulatingArrival && (
-                                <Button
-                                    size="lg"
-                                    className="w-full h-14"
-                                    onClick={handleStartWithPin}
-                                    disabled={isActionLoading}
-                                >
-                                    {isActionLoading ? (
-                                        <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-                                    ) : (
-                                        <>
-                                            <Clock className="mr-2" size={20} />
-                                            Iniciar Viagem {tripDetails?.securityPin ? '(PIN)' : ''}
-                                        </>
-                                    )}
-                                </Button>
-                            )}
-
-                            {/* PIN MODAL (Bloco 7.4) */}
-                            {showPinModal && (
-                                <div className="fixed inset-0 z-[2000] bg-black/80 backdrop-blur-md flex items-center justify-center p-6">
-                                    <div className="bg-white rounded-3xl p-6 w-full max-w-sm animate-in zoom-in duration-200">
-                                        <div className="text-center mb-6">
-                                            <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                                                <Shield size={32} className="text-gray-900" />
+                            {/* --- IDLE STATE (Empty) --- */}
+                            {isOnline && status === 'IDLE' && incomingRequests.length === 0 && (
+                                <div className="fixed bottom-24 left-4 right-4 animate-in slide-in-from-bottom duration-500">
+                                    <div className="bg-white rounded-2xl p-6 shadow-xl border border-gray-100 text-center relative overflow-hidden">
+                                        <div className="w-60 h-60 bg-green-400/20 rounded-full absolute -top-10 -right-10 blur-3xl animate-pulse" />
+                                        <div className="relative z-10 flex items-center gap-4">
+                                            <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center animate-bounce">
+                                                <Navigation size={24} className="text-blue-500" />
                                             </div>
-                                            <h2 className="text-xl font-bold">PIN de Segurança</h2>
-                                            <p className="text-gray-500 text-sm">Peça ao passageiro o código de 4 dígitos para iniciar.</p>
-                                        </div>
-
-                                        <Input
-                                            type="tel"
-                                            maxLength={4}
-                                            value={pinInput}
-                                            onChange={(e) => setPinInput(e.target.value.replace(/\D/g, ''))}
-                                            className="text-center text-4xl font-black h-20 tracking-[12px] bg-gray-50 border-gray-100 rounded-2xl mb-4"
-                                            placeholder="----"
-                                            autoFocus
-                                        />
-
-                                        {pinError && <p className="text-red-500 text-xs text-center font-bold mb-4">{pinError}</p>}
-
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <Button variant="ghost" className="h-12 font-bold" onClick={() => { setShowPinModal(false); setPinInput(''); setPinError(null); }}>
-                                                Cancelar
-                                            </Button>
-                                            <Button className="h-12 bg-primary text-black font-bold rounded-xl" onClick={confirmPin} disabled={pinInput.length < 4}>
-                                                Confirmar
-                                            </Button>
+                                            <div className="text-left flex-1">
+                                                <h3 className="font-bold text-gray-900">A procurar passageiros...</h3>
+                                                <p className="text-xs text-gray-500">Mantenha-se online.</p>
+                                            </div>
+                                            <div className="w-2 h-2 bg-green-500 rounded-full animate-ping" />
                                         </div>
                                     </div>
                                 </div>
                             )}
 
-                            {status === 'IN_PROGRESS' && tripDetails.stops && tripDetails.stops.length > 0 && !stopArrivalTime && (
-                                <Button
-                                    size="lg"
-                                    onClick={() => setAtStop(tripDetails.id)}
-                                    className="w-full h-14 bg-yellow-500 hover:bg-yellow-600 text-black font-bold border-none shadow-md mb-4"
-                                >
-                                    <Clock className="mr-2" size={20} />
-                                    Cheguei à Paragem
-                                </Button>
-                            )}
+                            {/* --- TRIP IN PROGRESS --- */}
+                            {isOnline && (status === 'ACCEPTED' || status === 'ARRIVED' || status === 'IN_PROGRESS') && tripDetails && (
+                                <div className="fixed bottom-24 left-4 right-4 z-[900] animate-in slide-in-from-bottom duration-300">
+                                    <div className="bg-white rounded-3xl p-5 shadow-2xl border-2 border-primary/20 flex flex-col">
+                                        <div className="flex justify-between items-center mb-4 border-b border-gray-100 pb-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                                                    <User size={20} />
+                                                </div>
+                                                <div>
+                                                    <div className="font-bold">Passageiro</div>
+                                                    <div className="text-xs text-gray-500">⭐ 4.9</div>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <div className="font-bold text-lg">
+                                                    {((tripDetails.price || 0) + (tripDetails.waitingTimeCost || 0) + (tripDetails.routeAdjustmentCost || 0)).toLocaleString()} MZN
+                                                </div>
+                                                <div className="text-[10px] text-gray-400">Dinheiro</div>
+                                            </div>
+                                        </div>
 
-                            {stopArrivalTime && (
-                                <Button
-                                    size="lg"
-                                    onClick={() => useTripStore.setState({ stopArrivalTime: null })}
-                                    className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white font-bold border-none shadow-md mb-4"
-                                >
-                                    <Navigation className="mr-2" size={20} />
-                                    Continuar Viagem
-                                </Button>
-                            )}
+                                        {/* Simplified Status Header */}
+                                        <div className="flex items-center gap-2 mb-4 bg-gray-50 p-3 rounded-xl">
+                                            <Navigation size={18} className="text-blue-500" />
+                                            <span className="font-bold text-base truncate flex-1">
+                                                {isSimulatingArrival ? 'Confirmando chegada...' :
+                                                    status === 'ACCEPTED' ? tripDetails.origin :
+                                                        status === 'ARRIVED' ? 'Aguardando embarque...' :
+                                                            tripDetails.destination}
+                                            </span>
+                                            {(isWaitingActive || stopArrivalTime) && (
+                                                <span className="bg-orange-100 text-orange-600 px-2 py-1 rounded text-[10px] font-black animate-pulse">
+                                                    +{tripDetails.waitingTimeMin}min
+                                                </span>
+                                            )}
+                                        </div>
 
-                            {status === 'IN_PROGRESS' && (
-                                <Button
-                                    size="lg"
-                                    className="w-full h-14 bg-green-600 text-white hover:bg-green-700 border-none font-bold"
-                                    onClick={() => tripDetails?.id && completeTrip(tripDetails.id)}
-                                    disabled={isActionLoading}
-                                >
-                                    {isActionLoading ? (
-                                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                    ) : (
-                                        <>
-                                            <DollarSign className="mr-2" size={20} />
-                                            Finalizar e Receber
-                                        </>
-                                    )}
-                                </Button>
-                            )}
+                                        <div className="grid grid-cols-2 gap-3 mb-3">
+                                            <Button variant="outline" className="h-12 border-primary text-primary font-bold gap-2" onClick={handleNavigation}>
+                                                <Navigation size={18} /> Navegar
+                                            </Button>
+                                            <Button variant="outline" className="h-12 border-gray-200 font-bold gap-2 relative" onClick={() => setIsChatOpen(true)}>
+                                                <MessageSquare size={18} /> Chat
+                                                {unreadCount > 0 && (
+                                                    <span className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full border-2 border-white">
+                                                        {unreadCount}
+                                                    </span>
+                                                )}
+                                            </Button>
+                                        </div>
 
-                            <div className="grid grid-cols-2 gap-2 mt-4">
-                                <Button variant="ghost" className="text-red-500 text-xs" onClick={() => tripDetails?.id && cancelTrip(tripDetails.id, 'DRIVER_CANCELLED')}>
-                                    Cancelar (Outro)
-                                </Button>
-                                <Button variant="ghost" className="text-red-500 text-xs" onClick={() => tripDetails?.id && cancelTrip(tripDetails.id, 'PASSENGER_NO_SHOW')}>
-                                    Cancelar (No Show)
-                                </Button>
-                            </div>
+                                        {/* Action Buttons */}
+                                        {status === 'ACCEPTED' && !isSimulatingArrival && (
+                                            <Button size="lg" className="w-full h-14 bg-black hover:bg-gray-900 text-white font-bold border-none shadow-lg"
+                                                onClick={() => {
+                                                    if (tripDetails?.id && latitude && longitude) {
+                                                        const speedKmh = (speed || 0) * 3.6;
+                                                        const validation = EliftIntelligence.validateArrivedStatus(latitude, longitude, tripDetails.originLat!, tripDetails.originLng!, speedKmh);
+                                                        if (!validation.valid) { alert(validation.reason); return; }
+                                                        useTripStore.getState().arriveAtPickup(tripDetails.id);
+                                                        setSimulatingArrival(true);
+                                                    }
+                                                }} disabled={isActionLoading}>
+                                                {isActionLoading ? <div className="w-5 h-5 border-2 border-white/30 rounded-full animate-spin" /> : <><MapPin className="mr-2" size={20} /> Cheguei ao Local</>}
+                                            </Button>
+                                        )}
+
+                                        {status === 'ARRIVED' && !isSimulatingArrival && (
+                                            <Button size="lg" className="w-full h-14" onClick={handleStartWithPin} disabled={isActionLoading}>
+                                                {isActionLoading ? <div className="w-5 h-5 border-2 border-primary/30 rounded-full animate-spin" /> : <><Clock className="mr-2" size={20} /> Iniciar Viagem {tripDetails?.securityPin ? '(PIN)' : ''}</>}
+                                            </Button>
+                                        )}
+
+                                        {status === 'IN_PROGRESS' && (
+                                            <Button size="lg" className="w-full h-14 bg-green-600 text-white hover:bg-green-700 border-none font-bold" onClick={() => tripDetails?.id && completeTrip(tripDetails.id)} disabled={isActionLoading}>
+                                                {isActionLoading ? <div className="w-5 h-5 border-2 border-white/30 rounded-full animate-spin" /> : <><DollarSign className="mr-2" size={20} /> Finalizar e Receber</>}
+                                            </Button>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
             </main>
+
+            {/* --- BOTTOM NAVIGATION BAR (FIXED) --- */}
+            {/* Hide if there's an active trip to focus driver? Or keep it? The user chose "Option A" so we keep it. */}
+            <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-6 py-2 pt-2 pb-safe flex justify-between items-center z-[1000] shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
+                <button
+                    onClick={() => setActiveTab('home')}
+                    className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${activeTab === 'home' ? 'text-gray-900 bg-gray-50 w-20' : 'text-gray-400'}`}
+                >
+                    <Home size={24} className={activeTab === 'home' ? 'fill-current' : ''} />
+                    <span className="text-[10px] font-bold">Início</span>
+                </button>
+                <button
+                    onClick={() => setActiveTab('earnings')}
+                    className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${activeTab === 'earnings' ? 'text-gray-900 bg-gray-50 w-20' : 'text-gray-400'}`}
+                >
+                    <BarChart2 size={24} className={activeTab === 'earnings' ? 'fill-current' : ''} />
+                    <span className="text-[10px] font-bold">Ganhos</span>
+                </button>
+                <button
+                    onClick={() => setActiveTab('profile')}
+                    className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${activeTab === 'profile' ? 'text-gray-900 bg-gray-50 w-20' : 'text-gray-400'}`}
+                >
+                    <User size={24} className={activeTab === 'profile' ? 'fill-current' : ''} />
+                    <span className="text-[10px] font-bold">Perfil</span>
+                </button>
+            </nav>
+
+            {/* AI Floating Button (Adjusted Position) */}
+            <div className={`fixed bottom-24 right-4 z-[900] transition-transform ${activeTab !== 'home' ? 'translate-y-20' : ''}`}>
+                <Button
+                    className="w-12 h-12 rounded-full bg-black text-primary shadow-xl border-2 border-primary/20 flex items-center justify-center p-0"
+                    onClick={() => setIsAiOpen(true)}
+                >
+                    <Bot size={24} />
+                </Button>
+            </div>
+
+            {/* PIN MODAL */}
+            {showPinModal && (
+                <div className="fixed inset-0 z-[2000] bg-black/80 backdrop-blur-md flex items-center justify-center p-6">
+                    <div className="bg-white rounded-3xl p-6 w-full max-w-sm animate-in zoom-in duration-200">
+                        <div className="text-center mb-6">
+                            <h2 className="text-xl font-bold">PIN de Segurança</h2>
+                            <p className="text-gray-500 text-sm">Peça o código ao passageiro.</p>
+                        </div>
+                        <Input
+                            type="tel"
+                            maxLength={4}
+                            value={pinInput}
+                            onChange={(e) => setPinInput(e.target.value.replace(/\D/g, ''))}
+                            className="text-center text-4xl font-black h-20 tracking-[12px] bg-gray-50 border-gray-100 rounded-2xl mb-4"
+                            placeholder="----"
+                            autoFocus
+                        />
+                        {pinError && <p className="text-red-500 text-xs text-center font-bold mb-4">{pinError}</p>}
+                        <div className="grid grid-cols-2 gap-3">
+                            <Button variant="ghost" className="h-12 font-bold" onClick={() => { setShowPinModal(false); setPinInput(''); setPinError(null); }}>Cancelar</Button>
+                            <Button className="h-12 bg-primary text-black font-bold rounded-xl" onClick={confirmPin} disabled={pinInput.length < 4}>Confirmar</Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

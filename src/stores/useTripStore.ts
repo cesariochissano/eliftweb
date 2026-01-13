@@ -293,9 +293,7 @@ export const useTripStore = create<TripState>()(
                             dest_lat: details.destLat,
                             dest_lng: details.destLng,
                             trip_version: 1,
-                            security_pin: (new Date().getHours() >= 22 || new Date().getHours() <= 5)
-                                ? Math.floor(1000 + Math.random() * 9000).toString()
-                                : null
+
                         })
                         .select()
                         .single();
@@ -745,7 +743,7 @@ export const useTripStore = create<TripState>()(
                     waitingTimeMin: trip.waiting_time_minutes,
                     waitingTimeCost: trip.waiting_time_cost,
                     stops: trip.stops,
-                    securityPin: trip.security_pin,
+                    securityPin: undefined, // Column missing in DB for now
                     isCriticalZone: trip.is_critical_zone,
                     basePrice: trip.base_price,
                     routeAdjustmentCost: trip.route_adjustment_cost

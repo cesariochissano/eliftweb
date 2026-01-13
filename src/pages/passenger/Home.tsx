@@ -613,6 +613,21 @@ export default function HomePassenger() {
 
     // Sheet State Management
     const [sheetState, setSheetState] = useState<'IDLE' | 'SEARCHING' | 'SELECTING'>('IDLE');
+    const [negotiationStep, setNegotiationStep] = useState<'SCANNING' | 'NEGOTIATING'>('SCANNING');
+
+    // Negotiation Logic (Block 9)
+    useEffect(() => {
+        if (status === 'REQUESTING') {
+            setNegotiationStep('SCANNING');
+            const timer = setTimeout(() => {
+                setNegotiationStep('NEGOTIATING');
+            }, 3000); // 3 seconds scan before finding candidate
+            return () => clearTimeout(timer);
+        } else {
+            setNegotiationStep('SCANNING'); // Reset
+        }
+    }, [status]);
+
 
     // Update sheet state based on interactions
     useEffect(() => {
@@ -713,8 +728,10 @@ export default function HomePassenger() {
                     pickupLocation={tripDetails ? { lat: tripDetails.originLat!, lng: tripDetails.originLng! } : null}
                     destinationLocation={tripDetails ? { lat: tripDetails.destLat!, lng: tripDetails.destLng! } : null}
                     onMapClick={handleMapClick}
-                    tripStatus={status}
+                    tripStatus={status === 'REQUESTING' && negotiationStep === 'NEGOTIATING' ? 'NEGOTIATING' : status}
+                    otherDrivers={onlineDrivers}
                     isSimulatingArrival={isSimulatingArrival}
+                    selectedService={selectedService} // Pass service for dynamic icons
                 />
             </div>
 
@@ -732,7 +749,7 @@ export default function HomePassenger() {
                     initial={{ y: '100%' }}
                     animate={{
                         y: 0,
-                        height: sheetState === 'SEARCHING' ? '100%' : '55vh' // Fill remaining space (100 - 45 = 55)
+                        height: sheetState === 'SEARCHING' ? '100%' : sheetState === 'SELECTING' ? '75vh' : '55vh' // More space for selection
                     }}
                     transition={{ type: 'spring', damping: 25, stiffness: 300 }}
                     className={`relative z-[600] bg-white shadow-[0_-10px_40px_rgba(0,0,0,0.15)] flex flex-col flex-1 ${sheetState === 'SEARCHING' ? 'rounded-none absolute inset-0' : 'rounded-t-[2rem] -mt-6'}`}
@@ -745,7 +762,7 @@ export default function HomePassenger() {
                         <div className="w-12 h-1.5 bg-gray-200 rounded-full" />
                     </div>
 
-                    <div className="flex-1 flex flex-col px-6 pb-safe overflow-hidden">
+                    <div className="flex-1 flex flex-col px-6 pb-safe overflow-y-auto">
 
                         {/* IDLE STATE: Full Screen Dashboard */}
                         {sheetState === 'IDLE' && (
@@ -1104,73 +1121,90 @@ export default function HomePassenger() {
                 onClose={() => setNotification(prev => ({ ...prev, visible: false }))}
             />
 
-            {/* CONFIRMATION SCREEN (Review) */}
-            {isConfirming && orderSummary && (
-                <div className="absolute inset-0 z-[700] bg-black/20 backdrop-blur-sm flex flex-col justify-end">
-                    <div className="bg-white rounded-t-[2rem] p-6 shadow-2xl animate-in slide-in-from-bottom duration-300">
-                        {/* ... Existing Confirmation Content ... */}
-                        <div className="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-6" />
 
-                        <div className="text-center mb-8">
-                            <p className="text-gray-500 text-sm font-medium mb-1">Total a Pagar</p>
-                            <div className="flex flex-col items-center">
-                                {orderSummary.originalPrice && (
-                                    <span className="text-lg text-gray-400 line-through decoration-red-500 decoration-2 font-bold select-none">
-                                        {orderSummary.originalPrice} MZN
-                                    </span>
-                                )}
-                                <h2 className="text-4xl font-black text-gray-900 flex items-center gap-2">
-                                    {(orderSummary.price || 0).toLocaleString()} <span className="text-xl text-gray-400 font-bold">MZN</span>
-                                </h2>
-                            </div>
-                        </div>
 
-                        <div className="grid grid-cols-[auto_1fr] gap-3">
-                            <Button variant="secondary" className="w-14 h-14 rounded-2xl flex items-center justify-center p-0" onClick={() => setIsConfirming(false)}>
-                                <X size={24} />
-                            </Button>
-                            <Button
-                                size="lg"
-                                className="h-14 text-lg font-bold rounded-2xl shadow-lg shadow-primary/20"
-                                onClick={handleConfirmTrip}
-                                disabled={!isOnline || !orderSummary || !isValidPrice(orderSummary.price) || isActionLoading}
-                            >
-                                {isActionLoading ? (
-                                    <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                ) : (
-                                    !isOnline ? 'Sem Conexão' : 'Chamar Motorista Agora'
-                                )}
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* REQUESTING / SEARCHING DRIVER - BOTTOM SHEET (Not Full Screen) */}
+            {/* INTELLIGENT MATCHING BOTTOM SHEET (Remix Yango) */}
             {status === 'REQUESTING' && (
-                <div className="absolute bottom-0 left-0 right-0 z-[800] bg-white rounded-t-[2rem] shadow-[0_-10px_60px_rgba(0,0,0,0.1)] p-6 pb-safe animate-in slide-in-from-bottom duration-300">
-                    <div className="flex items-center gap-6">
-                        <div className="w-16 h-16 relative shrink-0">
-                            <div className="absolute inset-0 border-4 border-gray-100 rounded-full"></div>
-                            <div className="absolute inset-0 border-4 border-[#10d772] border-t-transparent rounded-full animate-spin"></div>
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <Car size={24} className="text-[#10d772]" />
-                            </div>
-                        </div>
-                        <div className="flex-1">
-                            <h2 className="text-xl font-bold text-[#101b0d] mb-1">A procurar motorista...</h2>
-                            <p className="text-xs text-gray-500 leading-relaxed">Notificando motoristas próximos. Mantenha o app aberto.</p>
-                        </div>
-                    </div>
+                <div className="absolute inset-x-0 bottom-0 z-[700] flex flex-col justify-end pointer-events-none">
+                    {/* The Map Radar & Lines are handled by passing props to Map component */}
 
-                    <div className="mt-8">
-                        <Button variant="outline" className="w-full h-12 border-red-100 text-red-500 font-bold rounded-xl hover:bg-red-50" onClick={() => setShowCancelConfirm(true)}>
-                            Cancelar Pedido
-                        </Button>
+                    <div className="bg-white rounded-t-[2rem] p-6 shadow-[0_-10px_40px_rgba(0,0,0,0.15)] animate-in slide-in-from-bottom duration-500 pointer-events-auto">
+
+                        {/* PHASE 1: SCANNING (Social Proof) */}
+                        {negotiationStep === 'SCANNING' && (
+                            <div className="flex flex-col gap-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="relative">
+                                            <div className="w-3 h-3 bg-green-500 rounded-full animate-ping absolute inset-0" />
+                                            <div className="w-3 h-3 bg-green-500 rounded-full relative z-10" />
+                                        </div>
+                                        <span className="text-lg font-bold text-gray-900">A analisar rotas...</span>
+                                    </div>
+                                    <span className="text-xs font-bold bg-gray-100 text-gray-500 px-2 py-1 rounded-md">
+                                        ~2 min
+                                    </span>
+                                </div>
+
+                                <div className="h-1 bg-gray-100 rounded-full overflow-hidden w-full">
+                                    <div className="h-full bg-[#10d772] animate-[progress_2s_ease-in-out_infinite] w-[40%]" />
+                                </div>
+
+                                <div className="flex items-center gap-2 text-sm text-gray-500">
+                                    <Car size={16} className="text-gray-400" />
+                                    <span>Mais de <strong>{onlineDrivers.length > 0 ? onlineDrivers.length : 3} carros</strong> nas proximidades</span>
+                                </div>
+
+                                <Button
+                                    variant="ghost"
+                                    className="w-full text-red-500 font-bold h-12 rounded-xl hover:bg-red-50"
+                                    onClick={() => handleCancel('User cancelled during scanning')}
+                                >
+                                    Cancelar Pedido
+                                </Button>
+                            </div>
+                        )}
+
+                        {/* PHASE 2: NEGOTIATING (Connection) */}
+                        {negotiationStep === 'NEGOTIATING' && (
+                            <div className="flex flex-col gap-4">
+                                <div className="flex items-center justify-between mb-2">
+                                    <h3 className="text-lg font-bold text-gray-900">A contactar motorista...</h3>
+                                    <div className="w-8 h-8 rounded-full border-2 border-[#10d772] border-t-transparent animate-spin" />
+                                </div>
+
+                                {/* Simulated Candidate Driver Card */}
+                                <div className="flex items-center gap-4 bg-gray-50 p-3 rounded-2xl border border-gray-100">
+                                    <div className="w-12 h-12 rounded-full bg-gray-200 overflow-hidden relative">
+                                        {/* Placeholder Avatar */}
+                                        <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" alt="Driver" className="w-full h-full object-cover" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="font-bold text-gray-900">Negociando com João...</p>
+                                        <p className="text-xs text-gray-500">Toyota Passo • ABC 123 MP</p>
+                                    </div>
+                                    <div className="px-3 py-1 bg-[#10d772]/10 text-[#10d772] rounded-lg font-bold text-xs">
+                                        4.8 ★
+                                    </div>
+                                </div>
+
+                                <p className="text-center text-xs text-gray-400">
+                                    A aguardar resposta priorizada...
+                                </p>
+
+                                <Button
+                                    variant="ghost"
+                                    className="w-full text-red-500 font-bold h-12 rounded-xl hover:bg-red-50"
+                                    onClick={() => handleCancel('User cancelled during negotiation')}
+                                >
+                                    Cancelar
+                                </Button>
+                            </div>
+                        )}
+
                     </div>
                 </div>
             )}
-
             {/* ACTIVE TRIP OVERLAY */}
             {(status === 'ACCEPTED' || status === 'ARRIVED' || status === 'IN_PROGRESS' || status === 'COMPLETED') && tripDetails && (
                 <div className="absolute bottom-0 left-0 right-0 z-[600] bg-white rounded-t-[2rem] shadow-[0_-10px_60px_rgba(0,0,0,0.1)] pb-safe animate-in slide-in-from-bottom duration-500">
@@ -1408,7 +1442,6 @@ export default function HomePassenger() {
                     </div>
                 </div>
             )}
-
         </div>
     );
 }
