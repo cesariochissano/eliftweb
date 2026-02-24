@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Button } from '../../components/ui/button';
-import { Check, X, FileText } from 'lucide-react';
+import { Check, X, FileText, RefreshCw } from 'lucide-react';
 
 interface PendingDriver {
     id: string;
@@ -75,9 +75,21 @@ export default function AdminVerifications() {
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
-            <div>
-                <h1 className="text-2xl font-black text-gray-900 tracking-tighter">Verificação de Motoristas</h1>
-                <p className="text-sm font-medium text-gray-400">Analise os documentos e aprove os registros pendentes.</p>
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-2xl font-black text-gray-900 tracking-tighter">Verificação de Motoristas</h1>
+                    <p className="text-sm font-medium text-gray-400">Analise os documentos e aprove os registros pendentes.</p>
+                </div>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={fetchPendingDrivers}
+                    disabled={loading}
+                    className="gap-2"
+                >
+                    <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+                    Atualizar
+                </Button>
             </div>
 
             {/* Desktop Table View */}

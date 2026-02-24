@@ -14,13 +14,13 @@ interface ServiceGridProps {
 export const ServiceGrid: React.FC<ServiceGridProps> = ({ onSelectService, selectedService }) => {
     return (
         <div className="w-full flex flex-col gap-3">
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-3 pro:gap-5">
                 <NewServiceCard
                     title="Lift Drive"
                     imageSrc={car3d}
                     onClick={() => onSelectService('drive')}
                     selected={selectedService === 'drive'}
-                    className="col-span-2 aspect-[21/9] bg-white"
+                    className="col-span-2 aspect-[21/9] pro:aspect-[21/10] bg-white"
                     badgeText="CONFORTO"
                 />
                 <NewServiceCard
@@ -33,7 +33,7 @@ export const ServiceGrid: React.FC<ServiceGridProps> = ({ onSelectService, selec
 
                 {/* Row 2: Txopela (Span 1) + Carga (Span 2, Visual Dominant) */}
                 <NewServiceCard
-                    title="Txopela"
+                    title="Lift Txopela"
                     imageSrc={tuktuk3d}
                     onClick={() => onSelectService('txopela')}
                     selected={selectedService === 'txopela'}
@@ -44,7 +44,7 @@ export const ServiceGrid: React.FC<ServiceGridProps> = ({ onSelectService, selec
                     imageSrc={truck3d}
                     onClick={() => onSelectService('carga')}
                     selected={selectedService === 'carga'}
-                    className="col-span-2 aspect-video bg-white"
+                    className="col-span-2 aspect-video pro:aspect-[21/10] bg-white"
                     badgeText="NOVO"
                 />
             </div>

@@ -9,28 +9,28 @@ import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 // New Component Integration
 import VehicleMarker from './VehicleMarker';
 
+// Import 3D Assets
+import pinPickup from '../../assets/map/pin_pickup.png';
+
 // --- ICONS SETUP ---
 
-// New 3D Passenger Pin (Hailing)
 const passengerPinIcon = L.icon({
-    iconUrl: '/assets/pins/passenger_pin_3d.png',
-    iconSize: [48, 56], // Slightly larger for emphasis
-    iconAnchor: [24, 56], // Bottom tip
-    popupAnchor: [0, -50],
-    className: 'drop-shadow-xl' // Stronger shadow for floating effect
-});
-
-// Destination Pin (Placeholder: using same style for now, or DefaultIcon if preferred)
-// User asked to duplicate if needed. 
-const destinationPinIcon = L.icon({
-    iconUrl: '/assets/pins/passenger_pin_3d.png', // TO-DO: Replace with pin_destination_3d.png
+    iconUrl: pinPickup,
     iconSize: [48, 56],
     iconAnchor: [24, 56],
     popupAnchor: [0, -50],
-    className: 'drop-shadow-xl hue-rotate-15' // Subtle shift to distinguish or just keep same
+    className: 'drop-shadow-xl' // Green (Original)
 });
 
-let DefaultIcon = L.icon({
+const destinationPinIcon = L.icon({
+    iconUrl: pinPickup,
+    iconSize: [48, 56],
+    iconAnchor: [24, 56],
+    popupAnchor: [0, -50],
+    className: 'drop-shadow-xl hue-rotate-[140deg] brightness-90 saturate-150' // Shift Green -> Red
+});
+
+const DefaultIcon = L.icon({
     iconUrl: icon,
     shadowUrl: iconShadow,
     iconSize: [25, 41],
@@ -57,7 +57,7 @@ interface MapProps {
     otherDrivers?: Array<{ id: string; lat: number; lng: number }>;
     onMapClick?: (lat: number, lng: number) => void;
     tripStatus?: string;
-    // Removed unused props
+    bottomPadding?: number;
 }
 
 // --- HOOKS ---
@@ -118,14 +118,17 @@ const useTripSimulation = (
 
 // --- SUB-COMPONENTS ---
 
-function MapController({ routeStart, routeEnd, onMapClick, setRoute }: {
+function MapController({ routeStart, routeEnd, onMapClick, setRoute, bottomPadding = 50 }: {
     routeStart?: { lat: number; lng: number } | null,
     routeEnd?: { lat: number; lng: number } | null,
     onMapClick?: (lat: number, lng: number) => void,
-    setRoute: (route: [number, number][]) => void
+    setRoute: (route: [number, number][]) => void,
+    bottomPadding?: number
 }) {
     const map = useMap();
+    const [currentRouteBounds, setCurrentRouteBounds] = useState<L.LatLngBounds | null>(null);
 
+    // Effect: Calculate Route & Initial Fit
     useEffect(() => {
         if (routeStart && routeEnd) {
             const fetchRoute = async () => {
@@ -137,9 +140,11 @@ function MapController({ routeStart, routeEnd, onMapClick, setRoute }: {
                         setRoute(coords);
 
                         const bounds = L.latLngBounds(coords);
+                        setCurrentRouteBounds(bounds); // Save bounds for re-padding
+
                         map.fitBounds(bounds, {
                             paddingTopLeft: [50, 50],
-                            paddingBottomRight: [50, 300],
+                            paddingBottomRight: [50, 300], // Initial fallback
                             animate: true,
                             duration: 1
                         });
@@ -149,11 +154,31 @@ function MapController({ routeStart, routeEnd, onMapClick, setRoute }: {
                 }
             };
             fetchRoute();
-        } else if (routeStart && !routeEnd) {
-            map.flyTo([routeStart.lat, routeStart.lng], 16, { animate: true });
-            setRoute([]);
+        } else {
+            setCurrentRouteBounds(null);
+            // CHANGE: If missing points, DO NOT clear route here immediately to avoid flickering, 
+            // but 'Map' component will handle cleanup via tripStatus check.
+            // Actually, if routeEnd is explicitly null (e.g. cancelled), we should clear.
+            if (routeEnd && routeEnd.lat && routeEnd.lng) {
+                setRoute([]); // Clear if no destination
+            }
+            if (routeStart && routeStart.lat && routeStart.lng && !routeEnd) {
+                map.flyTo([routeStart.lat, routeStart.lng], 16, { animate: true });
+            }
         }
     }, [routeStart?.lat, routeStart?.lng, routeEnd?.lat, routeEnd?.lng, map, setRoute]);
+
+    // Effect: Update Padding when prop changes
+    useEffect(() => {
+        if (currentRouteBounds) {
+            map.fitBounds(currentRouteBounds, {
+                paddingTopLeft: [50, 50],
+                paddingBottomRight: [50, bottomPadding], // Dynamic Padding
+                animate: true,
+                duration: 0.8
+            });
+        }
+    }, [bottomPadding, currentRouteBounds, map]);
 
     // ... (rest of controller unchanged)
 
@@ -173,16 +198,26 @@ function MapController({ routeStart, routeEnd, onMapClick, setRoute }: {
 
 // --- MAIN COMPONENT ---
 
-export default function Map({ userLocation, pickupLocation, destinationLocation, driverLocation, otherDrivers, onMapClick, tripStatus }: MapProps) {
+export default function Map({ userLocation, pickupLocation, destinationLocation, driverLocation, otherDrivers, onMapClick, tripStatus, bottomPadding }: MapProps) {
     const [route, setRoute] = useState<[number, number][]>([]);
 
     // 1. Simulation Logic
-    // Trigger simulation when status is IN_PROGRESS (Demo Mode)
     const isTripActive = tripStatus === 'IN_PROGRESS';
     const { simulatedPos, bearing: simulatedBearing, currentRouteIndex } = useTripSimulation(route, isTripActive);
 
+    // 2. Clear Route on IDLE (Fix Ghost Routes)
+    useEffect(() => {
+        if (tripStatus === 'IDLE') {
+            setRoute([]);
+        }
+    }, [tripStatus]);
+
+
     // Determines effective driver position: Real or Simulated
-    const effectiveDriverPos = isTripActive && simulatedPos ? simulatedPos : (driverLocation ? [driverLocation.lat, driverLocation.lng] : null);
+    const isPosValid = (pos: any): pos is [number, number] =>
+        Array.isArray(pos) && typeof pos[0] === 'number' && typeof pos[1] === 'number' && !isNaN(pos[0]) && !isNaN(pos[1]);
+
+    const effectiveDriverPos = isTripActive && isPosValid(simulatedPos) ? simulatedPos : (driverLocation && typeof driverLocation.lat === 'number' && typeof driverLocation.lng === 'number' ? [driverLocation.lat, driverLocation.lng] : null);
     const effectiveBearing = isTripActive ? simulatedBearing : 0; // todo: real bearing from props
 
     // Dynamic Route Clipping: Show only from current car position onwards
@@ -210,6 +245,7 @@ export default function Map({ userLocation, pickupLocation, destinationLocation,
                     routeEnd={destinationLocation}
                     onMapClick={onMapClick}
                     setRoute={setRoute}
+                    bottomPadding={bottomPadding}
                 />
 
                 {/* Route Line (Black) */}
@@ -230,19 +266,19 @@ export default function Map({ userLocation, pickupLocation, destinationLocation,
                 )}
 
                 {/* Pickup Marker (Hide when IN_PROGRESS) */}
-                {pickupLocation && !isTripActive && (
+                {pickupLocation && pickupLocation.lat && pickupLocation.lng && !isTripActive && (
                     <Marker position={[pickupLocation.lat, pickupLocation.lng]} icon={passengerPinIcon} />
                 )}
 
                 {/* Destination Marker */}
-                {destinationLocation && (
+                {destinationLocation && destinationLocation.lat && destinationLocation.lng && (
                     <Marker position={[destinationLocation.lat, destinationLocation.lng]} icon={destinationPinIcon} />
                 )}
 
                 {/* --- 3D VEHICLE MARKERS --- */}
 
                 {/* Main Driver (Simulated or Real) */}
-                {effectiveDriverPos && (
+                {effectiveDriverPos && effectiveDriverPos[0] && effectiveDriverPos[1] && (
                     <VehicleMarker
                         position={effectiveDriverPos as [number, number]}
                         bearing={effectiveBearing}
@@ -250,7 +286,7 @@ export default function Map({ userLocation, pickupLocation, destinationLocation,
                 )}
 
                 {/* Other simulated drivers */}
-                {otherDrivers?.map(driver => (
+                {otherDrivers?.filter(d => d.lat && d.lng).map(driver => (
                     <VehicleMarker
                         key={driver.id}
                         position={[driver.lat, driver.lng]}

@@ -107,7 +107,7 @@ export class EliftIntelligence {
         const priceTime = durationMin * rules.perMin;
         const waitingCost = waitingTimeMin * 1; // 1 MT/min (Bloco 7.4)
 
-        let subtotal = rules.base + priceDistance + priceTime + waitingCost + routeAdjustmentCost;
+        const subtotal = rules.base + priceDistance + priceTime + waitingCost + routeAdjustmentCost;
 
         // Multipliers (Surge Pricing)
         let multiplier = demandFactor;

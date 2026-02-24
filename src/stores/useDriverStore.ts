@@ -1,217 +1,214 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { supabase } from '../lib/supabase';
+import type { Transaction } from '../types/wallet';
 
-interface TripRequest {
+interface DriverMetrics {
+    tripsToday: number;
+    earningsToday: number;
+    rating: number;
+    acceptanceRate: number;
+}
+
+interface IncomingRequest {
     id: string;
-    origin_address: string;
-    destination_address: string;
+    origin: string;
+    destination: string;
     price: number;
     distance: string;
     duration: string;
-    status: 'REQUESTING';
     passenger: {
         first_name: string;
         avatar_url: string | null;
-        rating?: number;
     };
+    [key: string]: any;
 }
 
 interface DriverState {
     isOnline: boolean;
-    incomingRequests: TripRequest[];
-    activeTripId: string | null;
+    metrics: DriverMetrics;
+    isLocationTracking: boolean;
+    incomingRequests: IncomingRequest[];
     walletBalance: number;
-    fleetType: 'INDIVIDUAL' | 'CORPORATE' | null;
+    fleetType: 'INDIVIDUAL' | 'CORPORATE';
 
     // Actions
-    fetchBalance: (driverId: string) => Promise<void>;
-    fetchFleetInfo: (driverId: string) => Promise<void>;
-    toggleOnline: (status: boolean) => Promise<void>;
-    subscribeToRequests: () => void;
-    acceptTrip: (tripId: string, driverId: string) => Promise<void>;
-    ignoreRequest: (tripId: string) => void;
-    resetDriverState: () => void;
+    setOnlineStatus: (status: boolean) => Promise<void>;
+    updateLocation: (lat: number, lng: number) => Promise<void>;
+    fetchMetrics: () => Promise<void>;
+
+    // Request Actions
+    addRequest: (req: IncomingRequest) => void;
+    ignoreRequest: (reqId: string) => void;
+    acceptTrip: (reqId: string, driverId: string) => Promise<void>;
+
+    // Financials
+    fetchBalance: (userId: string) => Promise<void>;
+    fetchFleetInfo: (userId: string) => Promise<void>;
+    toggleOnline: (status: boolean) => Promise<void>; // Alias for setOnlineStatus with checks
 }
 
-export const useDriverStore = create<DriverState>((set, get) => ({
-    isOnline: false,
-    incomingRequests: [],
-    activeTripId: null,
-    walletBalance: 0,
-    fleetType: null,
+export const useDriverStore = create<DriverState>()(
+    persist(
+        (set, get) => ({
+            isOnline: false,
+            isLocationTracking: false,
+            incomingRequests: [],
+            walletBalance: 0,
+            fleetType: 'INDIVIDUAL',
+            metrics: {
+                tripsToday: 0,
+                earningsToday: 0,
+                rating: 0,
+                acceptanceRate: 100
+            },
 
-    fetchBalance: async (driverId: string) => {
-        try {
-            const { data, error } = await supabase.rpc('get_driver_balance', { driver_uuid: driverId });
-            if (!error && data) {
-                const balance = typeof data === 'string' ? parseFloat(data.replace(/[^0-9.-]+/g, '')) : Number(data);
-                set({ walletBalance: balance });
-            }
-        } catch (e) {
-            console.warn('[DriverStore] get_driver_balance RPC not found.');
-        }
-    },
+            setOnlineStatus: async (status: boolean) => {
+                try {
+                    const { data: { user } } = await supabase.auth.getUser();
+                    if (!user) return;
 
-    fetchFleetInfo: async (driverId: string) => {
-        try {
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('fleet_id')
-                .eq('id', driverId)
-                .single();
+                    const { error } = await supabase
+                        .from('drivers')
+                        .update({ is_online: status })
+                        .eq('id', user.id);
 
-            if (!error && data?.fleet_id) {
-                const { data: fleet } = await supabase
-                    .from('fleets')
-                    .select('type')
-                    .eq('id', data.fleet_id)
-                    .single();
+                    if (error) throw error;
 
-                if (fleet) set({ fleetType: (fleet as any).type });
-            }
-        } catch (e) {
-            console.warn('[DriverStore] Fleet relationship not found.');
-        }
-    },
-
-    toggleOnline: async (status: boolean) => {
-        set({ isOnline: status });
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-            await supabase.from('drivers').upsert({
-                id: user.id,
-                is_online: status,
-                last_seen: new Date().toISOString()
-            });
-
-            if (status) {
-                get().subscribeToRequests();
-            } else {
-                set({ incomingRequests: [] });
-                supabase.channel('driver-requests').unsubscribe();
-            }
-        }
-    },
-
-    subscribeToRequests: () => {
-        // 1. Initial Fetch: Only get requests created in the last 20 minutes
-        const twentyMinsAgo = new Date(Date.now() - 20 * 60 * 1000).toISOString();
-
-        supabase
-            .from('trips')
-            .select(`
-                *,
-                passenger:passenger_id (
-                    first_name,
-                    avatar_url
-                )
-            `)
-            .eq('status', 'REQUESTING')
-            .is('driver_id', null)
-            .gt('created_at', twentyMinsAgo) // TIME FILTER
-            .then(({ data }: { data: any }) => {
-                if (data) {
-                    const formatted = data.map((t: any) => ({
-                        ...t,
-                        distance: t.distance_km ? `${t.distance_km} km` : t.distance,
-                        duration: t.duration_min ? `${t.duration_min} min` : t.duration
-                    }));
-                    set({ incomingRequests: formatted });
+                    set({ isOnline: status, isLocationTracking: status });
+                } catch (err) {
+                    console.error('Failed to set online status:', err);
                 }
-            });
+            },
 
-        // 2. Realtime Subscription
-        supabase
-            .channel('driver-requests')
-            .on(
-                'postgres_changes',
-                { event: 'INSERT', schema: 'public', table: 'trips', filter: 'status=eq.REQUESTING' },
-                async (payload: any) => {
-                    // Double check time just in case
-                    if (new Date(payload.new.created_at) < new Date(Date.now() - 20 * 60 * 1000)) return;
+            toggleOnline: async (status) => {
+                return get().setOnlineStatus(status);
+            },
 
-                    const { data } = await supabase
+            updateLocation: async (lat, lng) => {
+                if (!get().isOnline) return;
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) return;
+
+                const { error } = await supabase
+                    .from('drivers')
+                    .update({ lat, lng, last_seen: new Date().toISOString() })
+                    .eq('id', user.id);
+
+                if (error) console.error('Loc update failed', error);
+            },
+
+            fetchMetrics: async () => {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) return;
+
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                try {
+                    // 1. Contar viagens concluídas hoje
+                    const { count: tripsToday } = await supabase
+                        .from('trips')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('driver_id', user.id)
+                        .eq('status', 'COMPLETED')
+                        .gte('created_at', today.toISOString());
+
+                    // 2. Somar ganhos de hoje (Transações tipo CREDIT ligadas a viagens)
+                    const { data: earnings } = await supabase
+                        .from('transactions')
+                        .select('amount')
+                        .eq('driver_id', user.id)
+                        .eq('type', 'CREDIT')
+                        .gte('created_at', today.toISOString());
+
+                    const earningsToday = earnings?.reduce((acc: number, tx: Pick<Transaction, 'amount'>) => acc + (tx.amount || 0), 0) || 0;
+
+                    // 3. Obter rating médio (Simulado por enquanto ou da tabela de profiles/drivers se existir)
+                    const { data: profile } = await supabase
                         .from('profiles')
-                        .select('first_name, avatar_url')
-                        .eq('id', payload.new.passenger_id)
+                        .select('rating')
+                        .eq('id', user.id)
                         .single();
 
-                    const newTrip: TripRequest = {
-                        id: payload.new.id,
-                        origin_address: payload.new.origin_address,
-                        destination_address: payload.new.destination_address,
-                        price: payload.new.price,
-                        distance: payload.new.distance_km ? `${payload.new.distance_km} km` : '0 km',
-                        duration: payload.new.duration_min ? `${payload.new.duration_min} min` : '0 min',
-                        status: 'REQUESTING',
-                        passenger: {
-                            first_name: data?.first_name || 'Passageiro',
-                            avatar_url: data?.avatar_url || null,
-                            rating: 4.8
+                    set({
+                        metrics: {
+                            tripsToday: tripsToday || 0,
+                            earningsToday: earningsToday,
+                            rating: profile?.rating || 5.0,
+                            acceptanceRate: 98 // Manter fixo ou calcular se houver logs de rejeição
                         }
-                    };
-
-                    set((state) => ({
-                        incomingRequests: [...state.incomingRequests.filter(r => r.id !== newTrip.id), newTrip]
-                    }));
-
-                    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
-                    audio.play().catch(e => console.log('Audio Blocked', e));
+                    });
+                } catch (err) {
+                    console.error('Error fetching driver metrics:', err);
                 }
-            )
-            .on(
-                'postgres_changes',
-                { event: 'UPDATE', schema: 'public', table: 'trips' },
-                (payload: any) => {
-                    // Remove if no longer REQUESTING
-                    if (payload.new.status !== 'REQUESTING') {
-                        set((state) => ({
-                            incomingRequests: state.incomingRequests.filter(r => r.id !== payload.new.id)
-                        }));
+            },
+
+            fetchBalance: async (userId) => {
+                try {
+                    const { data: wallet } = await supabase
+                        .from('wallets')
+                        .select('balance')
+                        .eq('user_id', userId)
+                        .maybeSingle();
+
+                    if (wallet) {
+                        set({ walletBalance: wallet.balance });
                     }
+                } catch (err) {
+                    console.error('Error fetching wallet balance:', err);
                 }
-            )
-            .subscribe();
+            },
 
-        // 3. Periodic Cleanup (Every 1 minute)
-        // We attach this to the window or a store property to avoid leaks if called multiple times, 
-        // but for simplicity in Zustand, we rely on the component using this to handle unmount or just let it run.
-        // Better pattern: The caller (Dashboard) should manage the interval or we just check on state updates.
-    },
+            fetchFleetInfo: async (userId) => {
+                try {
+                    const { data: driver } = await supabase
+                        .from('drivers')
+                        .select('fleet_type')
+                        .eq('id', userId)
+                        .single();
 
-    ignoreRequest: (tripId: string) => {
-        set((state) => ({
-            incomingRequests: state.incomingRequests.filter(r => r.id !== tripId)
-        }));
-    },
+                    if (driver) {
+                        set({ fleetType: driver.fleet_type as any });
+                    }
+                } catch (err) {
+                    console.error('Error fetching fleet info:', err);
+                }
+            },
 
-    acceptTrip: async (tripId: string, driverId: string) => {
-        set({ activeTripId: tripId, incomingRequests: [] });
+            addRequest: (req) => {
+                set((state) => ({ incomingRequests: [...state.incomingRequests, req] }));
+            },
 
-        const { error } = await supabase
-            .from('trips')
-            .update({
-                status: 'ACCEPTED',
-                driver_id: driverId,
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', tripId)
-            .eq('status', 'REQUESTING');
+            ignoreRequest: (reqId) => {
+                set((state) => ({ incomingRequests: state.incomingRequests.filter(r => r.id !== reqId) }));
+            },
 
-        if (error) {
-            set({ activeTripId: null });
-            alert('Desculpe, esta viagem já foi aceite por outro motorista.');
-            get().subscribeToRequests();
-        } else {
-            // Success: Trigger TripStore to pick up the new active trip immediately
-            // We use the direct import to avoid circular hook dependency issues if any
-            const { useTripStore } = await import('./useTripStore');
-            await useTripStore.getState().rehydrateActiveTrip();
+            acceptTrip: async (tripId, driverId) => {
+                try {
+                    const { error } = await supabase
+                        .from('trips')
+                        .update({
+                            status: 'ACCEPTED',
+                            driver_id: driverId,
+                            trip_version: 1, // basic increment or fetch? Assuming 1 for new assignment
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('id', tripId);
+
+                    if (error) throw error;
+
+                    // Clear requests
+                    set({ incomingRequests: [] });
+                } catch (err) {
+                    console.error('Accept Trip Error', err);
+                }
+            }
+        }),
+        {
+            name: 'driver-storage',
+            storage: createJSONStorage(() => localStorage),
+            partialize: (state) => ({ isOnline: state.isOnline, metrics: state.metrics }),
         }
-    },
-
-    resetDriverState: () => {
-        set({ activeTripId: null, incomingRequests: [] });
-        get().subscribeToRequests();
-    }
-}));
+    )
+);

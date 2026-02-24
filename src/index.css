@@ -17,15 +17,54 @@
     scrollbar-width: none;
   }
 
-  /* Safe area for mobile */
+  /* Safe area utilities with fallbacks */
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 20px);
+  }
+
   .pb-safe {
-    padding-bottom: env(safe-area-inset-bottom);
+    padding-bottom: env(safe-area-inset-bottom, 20px);
+  }
+
+  .min-h-safe {
+    min-height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  }
+  
+  .h-dvh {
+    height: 100dvh;
+  }
+  
+  .min-h-dvh {
+    min-height: 100dvh;
   }
 }
 
 @layer base {
+  :root {
+    --sat: env(safe-area-inset-top);
+    --sab: env(safe-area-inset-bottom);
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+    min-height: 100%;
+  }
+
   body {
-    @apply bg-white text-text-main font-sans antialiased;
+    @apply bg-white text-text-main font-sans antialiased overflow-x-hidden;
+    /* Mobile viewport fix */
+    min-height: 100dvh;
+    /* Prevent pull-to-refresh on mobile if not desired contextually, 
+       but usually handled by overscroll-behavior */
+    overscroll-behavior-y: none;
+  }
+  
+  /* Prevent bouncing on iOS for full-screen apps */
+  #root {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
   }
 }
 
@@ -37,4 +76,37 @@
 /* Map specific fixes */
 .leaflet-container {
   background: #f8f9fa !important;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+/* Animations */
+@keyframes loading-bar {
+  0% { transform: translateX(-100%); }
+  50% { transform: translateX(100%); }
+  100% { transform: translateX(100%); }
+}
+
+.animate-loading-bar {
+  animation: loading-bar 1.5s infinite ease-in-out;
+}
+
+@keyframes radar-pulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.3);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 20px rgba(0, 0, 0, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
+  }
+}
+
+.animate-radar {
+  animation: radar-pulse 2s infinite;
 }

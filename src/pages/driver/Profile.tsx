@@ -15,22 +15,30 @@ export default function DriverProfile() {
 
     useEffect(() => {
         const fetchProfile = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
-
-            const { data: pData } = await supabase.from('profiles').select('*, fleets(name, type)').eq('id', user.id).single();
-
-            if (pData) {
-                setProfile(pData);
-                if (pData.fleets) {
-                    setFleet(pData.fleets);
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) {
+                    navigate('/');
+                    return;
                 }
+
+                const { data: pData } = await supabase.from('profiles').select('*, fleets(name, type)').eq('id', user.id).single();
+
+                if (pData) {
+                    setProfile(pData);
+                    if (pData.fleets) {
+                        setFleet(pData.fleets);
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching profile:', error);
+            } finally {
+                setLoading(false);
             }
-            setLoading(false);
         };
 
         fetchProfile();
-    }, []);
+    }, [navigate]);
 
     const handleJoinFleet = async () => {
         if (!inviteCode) return;
@@ -69,19 +77,19 @@ export default function DriverProfile() {
         }
     };
 
-    if (loading) return <div className="h-screen flex items-center justify-center"><div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" /></div>;
+    if (loading) return <div className="h-dvh flex items-center justify-center"><div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" /></div>;
 
     return (
-        <div className="min-h-screen bg-white flex flex-col">
+        <div className="min-h-dvh bg-gray-50 flex flex-col">
             <header className="bg-white p-4 pt-safe shadow-sm flex items-center gap-4 sticky top-0 z-10">
                 <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
                     <ArrowLeft size={24} />
                 </Button>
-                <h1 className="text-xl font-bold">Perfil Motorista</h1>
+                <h1 className="text-xl font-bold text-[#101b0d]">Perfil Motorista</h1>
             </header>
 
-            <main className="flex-1 p-6">
-                <div className="flex flex-col items-center mb-8">
+            <main className="flex-1 p-6 pb-safe space-y-6">
+                <div className="flex flex-col items-center">
                     <div className="w-24 h-24 bg-gray-900 text-white rounded-full flex items-center justify-center overflow-hidden border-4 border-white shadow-lg mb-4">
                         {profile?.avatar_url ? (
                             <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
@@ -89,12 +97,12 @@ export default function DriverProfile() {
                             <User size={40} />
                         )}
                     </div>
-                    <h2 className="text-xl font-bold">{profile?.first_name} {profile?.last_name}</h2>
+                    <h2 className="text-xl font-bold text-[#101b0d]">{profile?.first_name} {profile?.last_name}</h2>
                     <div className="flex items-center gap-1 mt-1">
                         <Star size={16} className="text-yellow-500 fill-current" />
                         <span className="font-bold">4.92</span>
                         <span className="text-gray-400 mx-1">•</span>
-                        <span className="text-gray-500">Motorista Elite</span>
+                        <span className="text-gray-500 font-medium">Motorista Elite</span>
                     </div>
                 </div>
 
@@ -111,18 +119,18 @@ export default function DriverProfile() {
                     </div>
 
                     <div>
-                        <h3 className="text-xs font-bold text-gray-500 mb-3 uppercase">Informações Pessoais</h3>
+                        <h3 className="text-xs font-extrabold text-gray-500 mb-3 uppercase tracking-wider">Informações Pessoais</h3>
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-[10px] font-bold text-gray-400 mb-1">Telemóvel</label>
-                                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100 text-gray-600">
+                                <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-100 text-gray-600 shadow-sm">
                                     <Phone size={18} />
                                     <span className="font-medium">{profile?.phone}</span>
                                 </div>
                             </div>
                             <div>
                                 <label className="block text-[10px] font-bold text-gray-400 mb-1">Email</label>
-                                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100 text-gray-600">
+                                <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-100 text-gray-600 shadow-sm">
                                     <Mail size={18} />
                                     <span className="font-medium">{profile?.email || 'Não definido'}</span>
                                 </div>
@@ -131,7 +139,7 @@ export default function DriverProfile() {
                     </div>
 
                     <div>
-                        <h3 className="text-xs font-bold text-gray-500 mb-3 uppercase">Veículo Ativo</h3>
+                        <h3 className="text-xs font-extrabold text-gray-500 mb-3 uppercase tracking-wider">Veículo Ativo</h3>
                         <div className="bg-gray-900 text-white p-5 rounded-2xl shadow-lg relative overflow-hidden">
                             <div className="absolute right-[-20px] top-[20px] opacity-10">
                                 <Car size={150} />
@@ -154,7 +162,7 @@ export default function DriverProfile() {
                     </div>
 
                     <div>
-                        <h3 className="text-xs font-bold text-gray-500 mb-3 uppercase tracking-wider">Gestão de Frota</h3>
+                        <h3 className="text-xs font-extrabold text-gray-500 mb-3 uppercase tracking-wider">Gestão de Frota</h3>
                         {fleet ? (
                             <div className="bg-primary/5 border border-primary/20 rounded-2xl p-5">
                                 <div className="flex items-center gap-3 mb-4">
@@ -175,7 +183,7 @@ export default function DriverProfile() {
                                 </div>
                             </div>
                         ) : (
-                            <div className="bg-gray-50 border border-gray-100 rounded-2xl p-5">
+                            <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
                                 <p className="text-xs text-gray-500 mb-4">
                                     Se você faz parte de uma frota, insira o código de convite abaixo para se vincular.
                                 </p>
@@ -185,13 +193,13 @@ export default function DriverProfile() {
                                         placeholder="FLEET-XXXX"
                                         value={inviteCode}
                                         onChange={(e) => setInviteCode(e.target.value)}
-                                        className="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-2 text-sm font-bold uppercase tracking-widest placeholder:normal-case placeholder:tracking-normal outline-none focus:border-primary"
+                                        className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-sm font-bold uppercase tracking-widest placeholder:normal-case placeholder:tracking-normal outline-none focus:border-primary"
                                     />
                                     <Button
                                         onClick={handleJoinFleet}
                                         disabled={joining || !inviteCode}
                                         size="sm"
-                                        className="font-bold"
+                                        className="font-bold bg-black text-white"
                                     >
                                         {joining ? '...' : 'Vincular'}
                                     </Button>

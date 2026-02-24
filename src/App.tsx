@@ -18,14 +18,16 @@ import FleetDashboard from './pages/fleet/FleetDashboard';
 import HomePassenger from './pages/passenger/Home';
 import PassengerTrips from './pages/passenger/Trips';
 import PassengerProfile from './pages/passenger/Profile';
+
 import PassengerSettings from './pages/passenger/Settings';
 import PassengerMenu from './pages/passenger/Menu';
 import PassengerSupport from './pages/passenger/Support';
 import PassengerFAQ from './pages/passenger/FAQ';
 import ContactSupport from './pages/passenger/ContactSupport';
 import ReportAccident from './pages/passenger/ReportAccident';
-import PassengerPayments from './pages/passenger/Payments';
+
 import AddCard from './pages/passenger/AddCard';
+import Wallet from './pages/passenger/Wallet';
 import PassengerPromotions from './pages/passenger/Promotions';
 
 // Driver Pages
@@ -124,64 +126,67 @@ export default function App() {
   }, []);
 
   return (
-    <div className="relative font-sans antialiased text-gray-900 overflow-x-hidden">
+    <div className="relative font-sans antialiased text-gray-900 overflow-x-hidden h-dvh w-full flex flex-col">
       <AnimatePresence>
         {!isOnline && (
           <motion.div
             initial={{ opacity: 0, y: -50 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -50 }}
-            className="fixed top-0 left-0 right-0 z-[9999] bg-gray-900 text-white p-2 text-center text-xs font-bold flex items-center justify-center gap-2"
+            className="fixed top-0 left-0 right-0 z-[9999] bg-gray-900 text-white p-2 pt-safe text-center text-xs font-bold flex items-center justify-center gap-2 shadow-md"
           >
-            <WifiOff size={14} /> Você está offline. Algumas funcionalidades podem não funcionar.
+            <WifiOff size={14} /> Você está offline.
           </motion.div>
         )}
       </AnimatePresence>
 
-      <BrowserRouter>
-        <AuthProvider>
-          <Routes>
-            <Route path="/" element={<LoginPhone />} />
-            <Route path="/auth/login-email" element={<LoginEmail />} />
-            <Route path="/auth/otp" element={<OTPVerify />} />
-            <Route path="/auth/complete-profile" element={<CompleteProfile />} />
-            <Route path="/auth/role" element={<RoleSelection />} />
-            {/* Dashboard Motorista */}
-            <Route path="/driver/dashboard" element={<ProtectedRoute allowedRoles={['DRIVER', 'SUPER_ADMIN']}><DriverDashboard /></ProtectedRoute>} />
-            <Route path="/driver/earnings" element={<ProtectedRoute allowedRoles={['DRIVER', 'SUPER_ADMIN']}><DriverEarnings /></ProtectedRoute>} />
-            <Route path="/driver/profile" element={<ProtectedRoute allowedRoles={['DRIVER', 'SUPER_ADMIN']}><DriverProfile /></ProtectedRoute>} />
-            <Route path="/driver/documents" element={<ProtectedRoute allowedRoles={['DRIVER', 'SUPER_ADMIN']}><DriverDocuments /></ProtectedRoute>} />
+      <div className="flex-1 flex flex-col relative w-full min-h-full">
+        <BrowserRouter>
+          <AuthProvider>
+            <Routes>
+              <Route path="/" element={<LoginPhone />} />
+              <Route path="/auth/login-email" element={<LoginEmail />} />
+              <Route path="/auth/otp" element={<OTPVerify />} />
+              <Route path="/auth/complete-profile" element={<CompleteProfile />} />
+              <Route path="/auth/role" element={<RoleSelection />} />
+              {/* Dashboard Motorista */}
+              <Route path="/driver/dashboard" element={<ProtectedRoute allowedRoles={['DRIVER', 'SUPER_ADMIN']}><DriverDashboard /></ProtectedRoute>} />
+              <Route path="/driver/earnings" element={<ProtectedRoute allowedRoles={['DRIVER', 'SUPER_ADMIN']}><DriverEarnings /></ProtectedRoute>} />
+              <Route path="/driver/profile" element={<ProtectedRoute allowedRoles={['DRIVER', 'SUPER_ADMIN']}><DriverProfile /></ProtectedRoute>} />
+              <Route path="/driver/documents" element={<ProtectedRoute allowedRoles={['DRIVER', 'SUPER_ADMIN']}><DriverDocuments /></ProtectedRoute>} />
 
-            {/* Dashboard Frotista */}
-            <Route path="/fleet/dashboard" element={<ProtectedRoute allowedRoles={['FLEET_MANAGER', 'SUPER_ADMIN']}><FleetDashboard /></ProtectedRoute>} />
+              {/* Dashboard Frotista */}
+              <Route path="/fleet/dashboard" element={<ProtectedRoute allowedRoles={['FLEET_MANAGER', 'SUPER_ADMIN']}><FleetDashboard /></ProtectedRoute>} />
 
-            {/* Admin Panel (Persistent Layout) */}
-            <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'SERVICE_ADMIN']}><AdminLayout /></ProtectedRoute>}>
-              <Route path="/admin" element={<AdminDashboard />} />
-              <Route path="/admin/verifications" element={<AdminVerifications />} />
-              <Route path="/admin/tickets" element={<AdminTickets />} />
-              <Route path="/admin/fleets" element={<AdminFleets />} />
-              <Route path="/admin/financials" element={<AdminFinancials />} />
-            </Route>
+              {/* Admin Panel (Persistent Layout) */}
+              <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'SERVICE_ADMIN']}><AdminLayout /></ProtectedRoute>}>
+                <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/admin/verifications" element={<AdminVerifications />} />
+                <Route path="/admin/tickets" element={<AdminTickets />} />
+                <Route path="/admin/fleets" element={<AdminFleets />} />
+                <Route path="/admin/financials" element={<AdminFinancials />} />
+              </Route>
 
-            {/* Passageiro */}
-            <Route path="/home" element={<ProtectedRoute allowedRoles={['PASSENGER', 'SUPER_ADMIN']}><HomePassenger /></ProtectedRoute>} />
-            <Route path="/passenger/trips" element={<ProtectedRoute allowedRoles={['PASSENGER', 'SUPER_ADMIN']}><PassengerTrips /></ProtectedRoute>} />
-            <Route path="/passenger/profile" element={<ProtectedRoute allowedRoles={['PASSENGER', 'SUPER_ADMIN']}><PassengerProfile /></ProtectedRoute>} />
-            <Route path="/passenger/settings" element={<ProtectedRoute allowedRoles={['PASSENGER', 'SUPER_ADMIN']}><PassengerSettings /></ProtectedRoute>} />
-            <Route path="/passenger/menu" element={<ProtectedRoute allowedRoles={['PASSENGER', 'SUPER_ADMIN']}><PassengerMenu /></ProtectedRoute>} />
-            <Route path="/passenger/support" element={<ProtectedRoute allowedRoles={['PASSENGER', 'SUPER_ADMIN']}><PassengerSupport /></ProtectedRoute>} />
-            <Route path="/passenger/faq" element={<ProtectedRoute allowedRoles={['PASSENGER', 'SUPER_ADMIN']}><PassengerFAQ /></ProtectedRoute>} />
-            <Route path="/passenger/contact" element={<ProtectedRoute allowedRoles={['PASSENGER', 'SUPER_ADMIN']}><ContactSupport /></ProtectedRoute>} />
-            <Route path="/passenger/report-accident" element={<ProtectedRoute allowedRoles={['PASSENGER', 'SUPER_ADMIN']}><ReportAccident /></ProtectedRoute>} />
-            <Route path="/passenger/payments" element={<ProtectedRoute allowedRoles={['PASSENGER', 'SUPER_ADMIN']}><PassengerPayments /></ProtectedRoute>} />
-            <Route path="/passenger/payment/add-card" element={<ProtectedRoute allowedRoles={['PASSENGER', 'SUPER_ADMIN']}><AddCard /></ProtectedRoute>} />
-            <Route path="/passenger/promotions" element={<ProtectedRoute allowedRoles={['PASSENGER', 'SUPER_ADMIN']}><PassengerPromotions /></ProtectedRoute>} />
+              {/* Passageiro */}
+              <Route path="/home" element={<ProtectedRoute allowedRoles={['PASSENGER', 'SUPER_ADMIN']}><HomePassenger /></ProtectedRoute>} />
+              <Route path="/passenger/trips" element={<ProtectedRoute allowedRoles={['PASSENGER', 'SUPER_ADMIN']}><PassengerTrips /></ProtectedRoute>} />
+              <Route path="/passenger/profile" element={<ProtectedRoute allowedRoles={['PASSENGER', 'SUPER_ADMIN']}><PassengerProfile /></ProtectedRoute>} />
+              <Route path="/passenger/settings" element={<ProtectedRoute allowedRoles={['PASSENGER', 'SUPER_ADMIN']}><PassengerSettings /></ProtectedRoute>} />
+              <Route path="/passenger/menu" element={<ProtectedRoute allowedRoles={['PASSENGER', 'SUPER_ADMIN']}><PassengerMenu /></ProtectedRoute>} />
+              <Route path="/passenger/support" element={<ProtectedRoute allowedRoles={['PASSENGER', 'SUPER_ADMIN']}><PassengerSupport /></ProtectedRoute>} />
+              <Route path="/passenger/faq" element={<ProtectedRoute allowedRoles={['PASSENGER', 'SUPER_ADMIN']}><PassengerFAQ /></ProtectedRoute>} />
+              <Route path="/passenger/contact" element={<ProtectedRoute allowedRoles={['PASSENGER', 'SUPER_ADMIN']}><ContactSupport /></ProtectedRoute>} />
+              <Route path="/passenger/report-accident" element={<ProtectedRoute allowedRoles={['PASSENGER', 'SUPER_ADMIN']}><ReportAccident /></ProtectedRoute>} />
 
-            <Route path="/terms" element={<Terms />} />
-          </Routes>
-        </AuthProvider>
-      </BrowserRouter>
+              <Route path="/passenger/payment/add-card" element={<ProtectedRoute allowedRoles={['PASSENGER', 'SUPER_ADMIN']}><AddCard /></ProtectedRoute>} />
+              <Route path="/passenger/wallet" element={<ProtectedRoute allowedRoles={['PASSENGER', 'SUPER_ADMIN']}><Wallet /></ProtectedRoute>} />
+              <Route path="/passenger/promotions" element={<ProtectedRoute allowedRoles={['PASSENGER', 'SUPER_ADMIN']}><PassengerPromotions /></ProtectedRoute>} />
+
+              <Route path="/terms" element={<Terms />} />
+            </Routes>
+          </AuthProvider>
+        </BrowserRouter>
+      </div>
     </div>
   );
 }

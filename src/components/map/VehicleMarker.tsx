@@ -1,24 +1,37 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Marker, Popup } from 'react-leaflet';
+import { Marker } from 'react-leaflet';
 import L from 'leaflet';
 
-// Define the icon using the user-provided asset path (simulated for now, would be a real URL in prod)
-// For this test, I will assume the image is available at /assets/vehicles/lift_drive_v1.png
-// The user just uploaded it, so I will conceptually map it there.
+// Import 3D Assets (Correct Paths)
+import carTop from '../../assets/map/car_top.png';
+import bike3d from '../../assets/3d/bike_3d.png';
+import tuktuk3d from '../../assets/3d/tuktuk_3d.png';
+import truck3d from '../../assets/3d/truck_3d.png';
 
 interface VehicleMarkerProps {
     position: [number, number]; // [lat, lng]
     bearing: number;           // 0-360 degrees
+    type?: 'drive' | 'bike' | 'txopela' | 'carga';
     previousPosition?: [number, number];
 }
 
-const VehicleMarker: React.FC<VehicleMarkerProps> = ({ position, bearing }) => {
+const VehicleMarker: React.FC<VehicleMarkerProps> = ({ position, bearing, type = 'drive' }) => {
     const markerRef = useRef<L.Marker>(null);
     const [currentPos, setCurrentPos] = useState(position);
     const [currentBearing, setCurrentBearing] = useState(bearing);
 
-    // Smooth interpolation logic would go here
-    // For this visual test, we just update directly but with a CSS transition on the rotation
+    // Asset Selection
+    const getIconSrc = () => {
+        switch (type) {
+            case 'bike': return bike3d;
+            case 'txopela': return tuktuk3d;
+            case 'carga': return truck3d;
+            case 'drive':
+            default: return carTop; // Correct Top-Down Asset
+        }
+    };
+
+    const iconSrc = getIconSrc();
 
     useEffect(() => {
         setCurrentPos(position);
@@ -29,19 +42,19 @@ const VehicleMarker: React.FC<VehicleMarkerProps> = ({ position, bearing }) => {
         className: 'vehicle-marker-icon',
         html: `
       <div style="
-        width: 48px;
-        height: 48px;
+        width: 20px;
+        height: 38px;
         transform: rotate(${currentBearing}deg);
         transition: transform 0.3s ease-in-out; 
-        background-image: url('/assets/vehicles/lift_drive_v1.png');
+        background-image: url('${iconSrc}');
         background-size: contain;
         background-repeat: no-repeat;
         background-position: center;
-        filter: drop-shadow(0px 4px 8px rgba(0,0,0,0.3));
+        filter: drop-shadow(0px 1px 2px rgba(0,0,0,0.3));
       "></div>
     `,
-        iconSize: [48, 48],
-        iconAnchor: [24, 24], // Center of the 48x48 icon
+        iconSize: [20, 38], // Even smaller (to fit line)
+        iconAnchor: [10, 19], // Center
     });
 
     return (
@@ -49,14 +62,9 @@ const VehicleMarker: React.FC<VehicleMarkerProps> = ({ position, bearing }) => {
             position={currentPos}
             icon={icon}
             ref={markerRef}
-            zIndexOffset={100} // Keep vehicles above other markers
+            zIndexOffset={100}
         >
-            <Popup>
-                <div className='font-bold text-center'>
-                    Lift Drive<br />
-                    <span className='text-xs text-gray-500'>Toyota Vitz • ABC 123</span>
-                </div>
-            </Popup>
+            {/* Removed Popup to keep map clean (Uber style) */}
         </Marker>
     );
 };

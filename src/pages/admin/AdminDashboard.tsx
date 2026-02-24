@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { Users, Car, CreditCard, Activity, FileText, CheckCircle, MessageSquare, Truck } from 'lucide-react';
+import { Card } from '../../components/ui/card';
 
 export default function AdminDashboard() {
     const navigate = useNavigate();
@@ -41,13 +42,13 @@ export default function AdminDashboard() {
     };
 
     const StatCard = ({ icon: Icon, label, value, color }: any) => (
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+        <Card padding="md">
             <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${color}`}>
                 <Icon size={24} className="text-white" />
             </div>
             <div className="text-2xl font-bold mb-1">{value}</div>
             <div className="text-sm text-gray-500">{label}</div>
-        </div>
+        </Card>
     );
 
     return (
@@ -85,7 +86,7 @@ export default function AdminDashboard() {
             {/* Quick Actions */}
             <div>
                 <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Gestão</h2>
-                <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden divide-y divide-gray-50 grid grid-cols-1 md:grid-cols-2">
+                <Card padding="none" className="overflow-hidden divide-y divide-gray-50 grid grid-cols-1 md:grid-cols-2">
                     <div
                         onClick={() => navigate('/admin/tickets')}
                         className="p-6 flex items-center gap-4 hover:bg-gray-50 cursor-pointer transition-colors border-r border-gray-50"
@@ -119,7 +120,7 @@ export default function AdminDashboard() {
                         </div>
                         <span className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-500">Em breve</span>
                     </button>
-                </div>
+                </Card>
             </div>
         </div>
     );

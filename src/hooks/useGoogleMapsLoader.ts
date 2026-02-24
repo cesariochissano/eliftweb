@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-const LIBRARIES: ("places" | "geometry" | "drawing" | "visualization")[] = ['places', 'geometry'];
+const LIBRARIES: string[] = ['places', 'geometry'];
 
 export function useGoogleMapsLoader() {
     const [isLoaded, setIsLoaded] = useState(false);

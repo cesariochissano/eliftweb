@@ -26,7 +26,7 @@ export default function Menu() {
 
     const menuItems = [
         { label: 'HISTÓRICO DE VIAGENS', path: '/passenger/trips' },
-        { label: 'PAGAMENTOS', path: '/passenger/payments' },
+        { label: 'CARTEIRA', path: '/passenger/wallet' },
         { label: 'CÓDIGO PROMOCIONAL', path: '/passenger/promotions' },
         { label: 'SUPORTE', path: '/passenger/support' },
         { label: 'DEFINIÇÕES', path: '/passenger/settings' },

@@ -18,7 +18,7 @@ export const NewServiceCard: React.FC<NewServiceCardProps> = ({ title, icon: Ico
             whileTap={{ scale: 0.98 }}
             onClick={onClick}
             className={`
-                rounded-[1.5rem] p-4 flex flex-col items-center justify-center gap-2 relative overflow-hidden transition-all shadow-sm
+                rounded-3xl p-4 flex flex-col items-center justify-center gap-2 relative overflow-hidden transition-all shadow-sm
                 ${selected
                     ? 'bg-white ring-2 ring-[#10d772] shadow-[0_4px_20px_rgba(16,215,114,0.15)]'
                     : 'bg-white border border-gray-100 hover:border-[#10d772]/30'}
